@@ -1,8 +1,8 @@
 import { WebSocket } from "ws";
 import { RoomManager } from "./RoomManager";
-import { OutgoingMessage } from "./types";
+import type { OutgoingMessage } from "./types";
 import client from "@repo/db/client";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import { JWT_PASSWORD } from "./config";
 
 function getRandomString(length: number) {
@@ -31,7 +31,7 @@ export class User {
   }
 
   initHandlers() {
-    this.ws.on("message", async (data) => {
+    this.ws.on("message", async (data: any) => {
       console.log(data)
       const parsedData = JSON.parse(data.toString());
       console.log(parsedData)

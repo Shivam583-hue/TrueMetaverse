@@ -1,5 +1,5 @@
 import type { User } from "./User";
-import { OutgoingMessage } from "./types";
+import type { OutgoingMessage } from "./types";
 
 export class RoomManager {
   rooms: Map<string, User[]> = new Map();

@@ -1,14 +1,18 @@
 {
-  "name": "ws",
+  "name": "websocket",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/ws": "^8.18.1"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@repo/db": "*",
+    "jsonwebtoken": "^9.0.3",
     "ws": "^8.21.0"
   }
 }
