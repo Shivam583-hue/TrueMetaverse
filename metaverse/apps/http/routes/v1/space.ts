@@ -102,7 +102,7 @@ spaceRouter.delete("/:spaceId", userMiddleware, async (req, res) => {
   console.log("req.params.spaceId", req.params.spaceId)
   const space = await client.space.findUnique({
     where: {
-      id: req.params.spaceId
+      id: req.params.spaceId as string
     }, select: {
       creatorId: true
     }
@@ -120,7 +120,7 @@ spaceRouter.delete("/:spaceId", userMiddleware, async (req, res) => {
 
   await client.space.delete({
     where: {
-      id: req.params.spaceId
+      id: req.params.spaceId as string
     }
   })
   res.json({ message: "Space deleted" })
@@ -161,13 +161,13 @@ spaceRouter.post("/element", userMiddleware, async (req, res) => {
     }
   })
 
-  if (req.body.x < 0 || req.body.y < 0 || req.body.x > space?.width! || req.body.y > space?.height!) {
-    res.status(400).json({ message: "Point is outside of the boundary" })
+  if (!space) {
+    res.status(400).json({ message: "Space not found" })
     return
   }
 
-  if (!space) {
-    res.status(400).json({ message: "Space not found" })
+  if (req.body.x < 0 || req.body.y < 0 || req.body.x > space.width || req.body.y > space.height) {
+    res.status(400).json({ message: "Point is outside of the boundary" })
     return
   }
   await client.spaceElements.create({
