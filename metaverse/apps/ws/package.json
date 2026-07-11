@@ -1,5 +1,5 @@
 {
-  "name": "websocket",
+  "name": "@repo/ws",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {

@@ -1,5 +1,5 @@
 {
-  "name": "http",
+  "name": "@repo/http",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
