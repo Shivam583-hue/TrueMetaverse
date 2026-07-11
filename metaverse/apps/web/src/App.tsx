@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { useAuth } from "./lib/auth";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
 
 // Arena pulls in Phaser (~1.4MB); keep it out of the main chunk
 const Arena = lazy(() => import("./pages/Arena"));
@@ -43,14 +42,6 @@ export default function App() {
             <Suspense fallback={<div className="arena-wrap" />}>
               <Arena />
             </Suspense>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/admin"
-        element={
-          <RequireAuth>
-            <Admin />
           </RequireAuth>
         }
       />

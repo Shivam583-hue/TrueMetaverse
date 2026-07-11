@@ -23,14 +23,8 @@ export default function TopBar() {
         true<span>metaverse</span>
       </Link>
       <div className="topbar-user">
-        {session.role === "Admin" && (
-          <Link to="/admin" className="btn ghost" style={{ textDecoration: "none" }}>
-            Admin
-          </Link>
-        )}
         {avatarUrl && <img src={avatarUrl} alt="" className="pixel" />}
         <span className="name">{session.username}</span>
-        {session.role === "Admin" && <span className="role">admin</span>}
         <button className="btn ghost" onClick={signout}>
           Sign out
         </button>

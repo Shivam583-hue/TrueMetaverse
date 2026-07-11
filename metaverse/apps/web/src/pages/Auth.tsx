@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";
 
-const SPRITE_SEEDS = ["Ember", "Nova", "Scout", "Robo", "Juniper"];
+const SPRITES = ["/avatars/wick.png", "/avatars/dai.png", "/avatars/mimi.png"];
 
 export default function Auth({ mode }: { mode: "signin" | "signup" }) {
   const { signin, signup } = useAuth();
@@ -42,15 +42,10 @@ export default function Auth({ mode }: { mode: "signin" | "signup" }) {
           <span className="wordmark">
             true<span>metaverse</span>
           </span>
-          <p>a tiny world for your team to walk around in</p>
+          <p>walk in, start the timer, study together</p>
           <div className="auth-sprites">
-            {SPRITE_SEEDS.map((seed) => (
-              <img
-                key={seed}
-                src={`https://api.dicebear.com/9.x/pixel-art/png?size=64&seed=${seed}`}
-                alt=""
-                className="pixel"
-              />
+            {SPRITES.map((src) => (
+              <img key={src} src={src} alt="" className="pixel" />
             ))}
           </div>
         </div>

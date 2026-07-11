@@ -1,14 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Phaser from "phaser";
 import { api } from "../lib/api";
-import type { Element } from "../lib/api";
+import type { LeaderboardEntry, LeaderboardPeriod } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { ArenaSocket } from "../lib/ws";
 import { ArenaScene } from "../game/ArenaScene";
-import type { EditMode } from "../game/ArenaScene";
 
 type UserMeta = { username: string | null; avatarUrl: string | null };
+
+export function formatDuration(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
 
 export default function Arena() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -19,24 +26,36 @@ export default function Arena() {
   const metaRef = useRef(new Map<string, UserMeta>());
 
   const [spaceName, setSpaceName] = useState<string | null>(null);
-  const [isCreator, setIsCreator] = useState(false);
   const [online, setOnline] = useState<Record<string, string>>({}); // sessionId -> userId
   const [meta, setMeta] = useState<Record<string, UserMeta>>({});
   const [status, setStatus] = useState<"connecting" | "live" | "closed" | "error">("connecting");
   const [errorText, setErrorText] = useState<string | null>(null);
 
-  const [palette, setPalette] = useState<Element[]>([]);
-  const [editMode, setEditMode] = useState<EditMode>("off");
-  const [placeElementId, setPlaceElementId] = useState<string | null>(null);
+  // study timer
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const startedAtRef = useRef<number | null>(null);
+  startedAtRef.current = startedAt;
 
-  const editRef = useRef({ mode: editMode as EditMode, placeElementId });
-  editRef.current = { mode: editMode, placeElementId };
+  // ranking board
+  const [boardOpen, setBoardOpen] = useState(false);
 
   useEffect(() => {
     if (!spaceId || !session || !canvasRef.current) return;
 
     let disposed = false;
     let game: Phaser.Game | null = null;
+
+    // events can arrive before Phaser has booted; buffer scene work until ready
+    let sceneReady = false;
+    let pendingSceneWork: (() => void)[] = [];
+    const withScene = (fn: (scene: ArenaScene) => void) => {
+      if (sceneReady && sceneRef.current) {
+        fn(sceneRef.current);
+      } else {
+        pendingSceneWork.push(() => sceneRef.current && fn(sceneRef.current));
+      }
+    };
 
     async function ensureMeta(userIds: string[]) {
       const missing = [...new Set(userIds)].filter((id) => !metaRef.current.has(id));
@@ -49,7 +68,7 @@ export default function Arena() {
         for (const m of res.avatars) {
           const entry = { username: m.username, avatarUrl: m.avatarId ?? null };
           metaRef.current.set(m.userId, entry);
-          sceneRef.current?.setUserMeta(m.userId, entry.username, entry.avatarUrl);
+          withScene((scene) => scene.setUserMeta(m.userId, entry.username, entry.avatarUrl));
         }
         setMeta(Object.fromEntries(metaRef.current));
       } catch {
@@ -57,80 +76,66 @@ export default function Arena() {
       }
     }
 
+    // 1. open the socket and join immediately - never wait for assets
+    const socket = new ArenaSocket(
+      {
+        "space-joined": (payload) => {
+          setStatus("live");
+          setOnline(Object.fromEntries(payload.users.map((u) => [u.id, u.userId])));
+          ensureMeta([session!.userId, ...payload.users.map((u) => u.userId)]);
+          withScene((scene) => {
+            scene.spawnLocal(payload.spawn.x, payload.spawn.y, session!.userId);
+            for (const u of payload.users) scene.addRemote(u.id, u.userId, u.x, u.y);
+            for (const [userId, m] of metaRef.current) {
+              scene.setUserMeta(userId, m.username, m.avatarUrl);
+            }
+          });
+        },
+        "user-joined": (payload) => {
+          setOnline((prev) => ({ ...prev, [payload.id]: payload.userId }));
+          withScene((scene) => scene.addRemote(payload.id, payload.userId, payload.x, payload.y));
+          ensureMeta([payload.userId]).then(() => {
+            const m = metaRef.current.get(payload.userId);
+            if (m) withScene((scene) => scene.setUserMeta(payload.userId, m.username, m.avatarUrl));
+          });
+        },
+        movement: (payload) => withScene((scene) => scene.moveRemote(payload.id, payload.x, payload.y)),
+        "movement-rejected": (payload) => withScene((scene) => scene.rollbackLocal(payload.x, payload.y)),
+        "user-left": (payload) => {
+          withScene((scene) => scene.removeRemote(payload.id));
+          setOnline((prev) => {
+            const next = { ...prev };
+            delete next[payload.id];
+            return next;
+          });
+        },
+      },
+      () => setStatus("closed"),
+    );
+    socketRef.current = socket;
+    socket.join(spaceId, session.token);
+
+    // 2. fetch the room and boot Phaser in parallel with the handshake
     async function boot() {
       let detail;
       try {
         detail = await api.space(spaceId!);
       } catch {
         setStatus("error");
-        setErrorText("This space doesn't exist (or was deleted).");
+        setErrorText("This room doesn't exist (or was deleted).");
         return;
       }
-      const mine = await api
-        .mySpaces()
-        .then((r) => r.spaces.find((s) => s.id === spaceId))
-        .catch(() => undefined);
       if (disposed) return;
-      setIsCreator(!!mine);
-      setSpaceName(mine?.name ?? null);
-      if (mine) {
-        api.elements().then((r) => setPalette(r.elements)).catch(() => {});
-      }
+      setSpaceName(detail.name);
+      if (detail.official) setBoardOpen(true);
 
       const scene = new ArenaScene(detail, {
         onSceneReady: () => {
-          const socket = new ArenaSocket(
-            {
-              "space-joined": (payload) => {
-                setStatus("live");
-                scene.spawnLocal(payload.spawn.x, payload.spawn.y, session!.userId);
-                setOnline(Object.fromEntries(payload.users.map((u) => [u.id, u.userId])));
-                for (const u of payload.users) scene.addRemote(u.id, u.userId, u.x, u.y);
-                ensureMeta([session!.userId, ...payload.users.map((u) => u.userId)]);
-              },
-              "user-joined": (payload) => {
-                scene.addRemote(payload.id, payload.userId, payload.x, payload.y);
-                setOnline((prev) => ({ ...prev, [payload.id]: payload.userId }));
-                ensureMeta([payload.userId]).then(() => {
-                  const m = metaRef.current.get(payload.userId);
-                  if (m) scene.setUserMeta(payload.userId, m.username, m.avatarUrl);
-                });
-              },
-              movement: (payload) => scene.moveRemote(payload.id, payload.x, payload.y),
-              "movement-rejected": (payload) => scene.rollbackLocal(payload.x, payload.y),
-              "user-left": (payload) => {
-                scene.removeRemote(payload.id);
-                setOnline((prev) => {
-                  const next = { ...prev };
-                  delete next[payload.id];
-                  return next;
-                });
-              },
-            },
-            () => setStatus("closed"),
-          );
-          socketRef.current = socket;
-          socket.join(spaceId!, session!.token);
+          sceneReady = true;
+          for (const work of pendingSceneWork) work();
+          pendingSceneWork = [];
         },
         onMoveAttempt: (x, y) => socketRef.current?.move(x, y),
-        onTileClick: async (x, y) => {
-          const { mode, placeElementId } = editRef.current;
-          try {
-            if (mode === "place" && placeElementId) {
-              await api.addSpaceElement(spaceId!, placeElementId, x, y);
-            } else if (mode === "erase") {
-              const id = sceneRef.current?.elementAt(x, y);
-              if (!id) return;
-              await api.deleteSpaceElement(id);
-            } else {
-              return;
-            }
-            const fresh = await api.space(spaceId!);
-            sceneRef.current?.setElements(fresh.elements);
-          } catch {
-            // e.g. placing out of bounds; leave the board as-is
-          }
-        },
       });
       sceneRef.current = scene;
 
@@ -139,7 +144,7 @@ export default function Arena() {
         parent: canvasRef.current!,
         scene,
         pixelArt: true,
-        backgroundColor: "#14162b",
+        backgroundColor: "#07080f",
         scale: {
           mode: Phaser.Scale.RESIZE,
           width: "100%",
@@ -150,8 +155,32 @@ export default function Arena() {
 
     boot();
 
+    // 3. resume a timer that was already running (e.g. page reload)
+    api.study
+      .me()
+      .then((res) => {
+        if (!disposed && res.activeSession) {
+          setStartedAt(new Date(res.activeSession.startedAt).getTime());
+        }
+      })
+      .catch(() => {});
+
+    const stopOnLeave = () => {
+      if (startedAtRef.current !== null) {
+        const token = localStorage.getItem("tm.token");
+        fetch("/api/v1/study/stop", {
+          method: "POST",
+          keepalive: true,
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+      }
+    };
+    window.addEventListener("pagehide", stopOnLeave);
+
     return () => {
       disposed = true;
+      window.removeEventListener("pagehide", stopOnLeave);
+      stopOnLeave();
       socketRef.current?.close();
       socketRef.current = null;
       sceneRef.current = null;
@@ -159,9 +188,32 @@ export default function Arena() {
     };
   }, [spaceId, session]);
 
+  // tick the timer and mirror it above the avatar
   useEffect(() => {
-    sceneRef.current?.setEditMode(editMode);
-  }, [editMode]);
+    if (startedAt === null) {
+      setElapsed(0);
+      sceneRef.current?.setLocalTimer(null);
+      return;
+    }
+    const tick = () => {
+      const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+      setElapsed(seconds);
+      sceneRef.current?.setLocalTimer(formatDuration(seconds));
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt]);
+
+  const toggleTimer = useCallback(async () => {
+    if (startedAt === null) {
+      const res = await api.study.start(spaceId);
+      setStartedAt(new Date(res.startedAt).getTime());
+    } else {
+      setStartedAt(null);
+      await api.study.stop().catch(() => {});
+    }
+  }, [startedAt, spaceId]);
 
   const onlineEntries = Object.entries(online);
 
@@ -173,7 +225,7 @@ export default function Arena() {
         <Link to="/" className="btn ghost" style={{ textDecoration: "none" }}>
           ← Leave
         </Link>
-        <span className="hud-chip">{spaceName ?? `space ${spaceId?.slice(0, 6)}`}</span>
+        <span className="hud-chip">{spaceName ?? "..."}</span>
         {status !== "live" && (
           <span className="hud-chip mono">
             {status === "connecting" ? "connecting..." : status === "closed" ? "disconnected" : "error"}
@@ -205,72 +257,107 @@ export default function Arena() {
             ))}
           </ul>
         </div>
+        <button className="btn ghost" onClick={() => setBoardOpen(true)}>
+          Ranking board
+        </button>
       </div>
 
-      {errorText ? (
-        <div className="hud bottom-center">
+      <div className="hud bottom-center">
+        <button className={`btn timer-btn${startedAt !== null ? " running" : ""}`} onClick={toggleTimer}>
+          {startedAt === null ? "▶ Start studying" : `■ Stop · ${formatDuration(elapsed)}`}
+        </button>
+        {errorText ? (
           <span className="hud-chip" style={{ color: "var(--alert)" }}>
-            {errorText} <Link to="/">Back to your spaces</Link>
+            {errorText} <Link to="/">Back to rooms</Link>
           </span>
-        </div>
-      ) : (
-        <div className="hud bottom-center">
-          <span className="hud-chip mono">
-            {editMode === "off"
-              ? "arrow keys / wasd to move"
-              : editMode === "place"
-                ? "click a tile to place - press Done to walk again"
-                : "click an element to remove it"}
-          </span>
-        </div>
-      )}
+        ) : (
+          <span className="hud-chip mono">arrow keys / wasd to move</span>
+        )}
+      </div>
 
-      {isCreator && (
-        <div className="palette">
-          <div className="title">build</div>
-          {editMode === "off" ? (
-            <button className="btn" style={{ width: "100%" }} onClick={() => setEditMode("erase")}>
-              Edit space
+      {boardOpen && <LeaderboardDialog onClose={() => setBoardOpen(false)} />}
+    </div>
+  );
+}
+
+const PERIODS: { key: LeaderboardPeriod; label: string }[] = [
+  { key: "all", label: "all time" },
+  { key: "daily", label: "today" },
+  { key: "weekly", label: "week" },
+  { key: "monthly", label: "month" },
+];
+
+function LeaderboardDialog({ onClose }: { onClose: () => void }) {
+  const [period, setPeriod] = useState<LeaderboardPeriod>("all");
+  const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
+
+  useEffect(() => {
+    let stale = false;
+    setEntries(null);
+    api.study
+      .leaderboard(period)
+      .then((res) => !stale && setEntries(res.entries))
+      .catch(() => !stale && setEntries([]));
+    return () => {
+      stale = true;
+    };
+  }, [period]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="card modal board" onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ fontSize: "0.95rem", color: "var(--coin)" }}>ranking board</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Total study time across every room.
+        </p>
+
+        <div className="board-tabs">
+          {PERIODS.map((p) => (
+            <button
+              key={p.key}
+              className={period === p.key ? "active" : ""}
+              onClick={() => setPeriod(p.key)}
+            >
+              {p.label}
             </button>
-          ) : (
-            <>
-              <div className="palette-grid">
-                {palette.map((el) => (
-                  <button
-                    key={el.id}
-                    className={`palette-item${editMode === "place" && placeElementId === el.id ? " selected" : ""}`}
-                    onClick={() => {
-                      setPlaceElementId(el.id);
-                      setEditMode("place");
-                    }}
-                    title={el.static ? "blocks walking" : "walkable"}
-                  >
-                    <img src={el.imageUrl} alt="" className="pixel" />
-                  </button>
-                ))}
-              </div>
-              <button
-                className={`btn${editMode === "erase" ? " danger" : " ghost"}`}
-                style={{ width: "100%", marginTop: "0.4rem" }}
-                onClick={() => setEditMode("erase")}
-              >
-                Eraser
-              </button>
-              <button
-                className="btn primary"
-                style={{ width: "100%", marginTop: "0.4rem" }}
-                onClick={() => {
-                  setEditMode("off");
-                  setPlaceElementId(null);
-                }}
-              >
-                Done
-              </button>
-              <p className="hint">Changes save instantly for everyone who joins later.</p>
-            </>
-          )}
+          ))}
         </div>
-      )}
+
+        {entries === null ? (
+          <p className="muted">Loading...</p>
+        ) : entries.length === 0 ? (
+          <div className="empty">No study sessions yet. Start the timer and claim the top spot.</div>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th></th>
+                <th>scholar</th>
+                <th style={{ textAlign: "right" }}>time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry) => (
+                <tr key={entry.userId}>
+                  <td style={{ fontFamily: "var(--font-mono)" }}>{entry.rank}</td>
+                  <td>{entry.avatarUrl && <img src={entry.avatarUrl} alt="" className="pixel" />}</td>
+                  <td>{entry.username}</td>
+                  <td style={{ textAlign: "right", fontFamily: "var(--font-mono)" }}>
+                    {formatDuration(entry.totalSeconds)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        <div className="modal-actions">
+          <button className="btn primary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

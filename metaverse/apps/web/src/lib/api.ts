@@ -23,8 +23,8 @@ export type MapTemplate = {
   id: string;
   name: string;
   thumbnail: string;
+  mapImage: string | null;
   dimensions: string;
-  defaultElements: (Element & { elementId: string; x: number; y: number })[];
 };
 
 export type SpaceSummary = {
@@ -32,9 +32,14 @@ export type SpaceSummary = {
   name: string;
   thumbnail: string | null;
   dimensions: string;
+  code: string;
 };
 
 export type SpaceDetail = {
+  name: string;
+  code: string;
+  official: boolean;
+  mapImage: string | null;
   dimensions: string;
   elements: { id: string; element: Element; x: number; y: number }[];
 };
@@ -43,6 +48,16 @@ export type UserMetadata = {
   userId: string;
   username: string;
   avatarId?: string; // the avatar's imageUrl, per backend contract
+};
+
+export type LeaderboardPeriod = "all" | "daily" | "weekly" | "monthly";
+
+export type LeaderboardEntry = {
+  rank: number;
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  totalSeconds: number;
 };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -75,29 +90,21 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
 
-  elements: () => request<{ elements: Element[] }>("/elements"),
   avatars: () => request<{ avatars: Avatar[] }>("/avatars"),
   maps: () => request<{ maps: MapTemplate[] }>("/maps"),
 
   mySpaces: () => request<{ spaces: SpaceSummary[] }>("/space/all"),
+  officialSpaces: () => request<{ spaces: SpaceSummary[] }>("/space/official"),
+  spaceByCode: (code: string) =>
+    request<{ spaceId: string }>(`/space/code/${encodeURIComponent(code.trim())}`),
   space: (spaceId: string) => request<SpaceDetail>(`/space/${spaceId}`),
-  createSpace: (name: string, dimensions: string, mapId?: string) =>
-    request<{ spaceId: string }>("/space", {
+  createSpace: (name: string, mapId: string) =>
+    request<{ spaceId: string; code: string }>("/space", {
       method: "POST",
-      body: JSON.stringify({ name, dimensions, ...(mapId ? { mapId } : {}) }),
+      body: JSON.stringify({ name, mapId }),
     }),
   deleteSpace: (spaceId: string) =>
     request<{ message: string }>(`/space/${spaceId}`, { method: "DELETE" }),
-  addSpaceElement: (spaceId: string, elementId: string, x: number, y: number) =>
-    request<{ message: string }>("/space/element", {
-      method: "POST",
-      body: JSON.stringify({ spaceId, elementId, x, y }),
-    }),
-  deleteSpaceElement: (id: string) =>
-    request<{ message: string }>("/space/element", {
-      method: "DELETE",
-      body: JSON.stringify({ id }),
-    }),
 
   updateMetadata: (avatarId: string) =>
     request<{ message: string }>("/user/metadata", {
@@ -109,43 +116,18 @@ export const api = {
       `/user/metadata/bulk?ids=[${userIds.join(",")}]`,
     ),
 
-  admin: {
-    createElement: (data: { imageUrl: string; width: number; height: number; static: boolean }) =>
-      request<{ id: string }>("/admin/element", { method: "POST", body: JSON.stringify(data) }),
-    updateElement: (elementId: string, imageUrl: string) =>
-      request<{ message: string }>(`/admin/element/${elementId}`, {
-        method: "PUT",
-        body: JSON.stringify({ imageUrl }),
+  study: {
+    start: (spaceId?: string) =>
+      request<{ sessionId: string; startedAt: string }>("/study/start", {
+        method: "POST",
+        body: JSON.stringify(spaceId ? { spaceId } : {}),
       }),
-    createAvatar: (data: { name: string; imageUrl: string }) =>
-      request<{ avatarId: string }>("/admin/avatar", { method: "POST", body: JSON.stringify(data) }),
-    updateAvatar: (avatarId: string, data: { name?: string; imageUrl?: string }) =>
-      request<{ message: string }>(`/admin/avatar/${avatarId}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }),
-    deleteAvatar: (avatarId: string) =>
-      request<{ message: string }>(`/admin/avatar/${avatarId}`, { method: "DELETE" }),
-    createMap: (data: {
-      name: string;
-      dimensions: string;
-      thumbnail: string;
-      defaultElements: { elementId: string; x: number; y: number }[];
-    }) => request<{ id: string }>("/admin/map", { method: "POST", body: JSON.stringify(data) }),
-    updateMap: (
-      mapId: string,
-      data: {
-        name?: string;
-        dimensions?: string;
-        thumbnail?: string;
-        defaultElements?: { elementId: string; x: number; y: number }[];
-      },
-    ) =>
-      request<{ message: string }>(`/admin/map/${mapId}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }),
-    deleteMap: (mapId: string) =>
-      request<{ message: string }>(`/admin/map/${mapId}`, { method: "DELETE" }),
+    stop: () => request<{ durationSeconds: number }>("/study/stop", { method: "POST" }),
+    me: () =>
+      request<{ activeSession: { sessionId: string; startedAt: string } | null }>("/study/me"),
+    leaderboard: (period: LeaderboardPeriod) =>
+      request<{ period: string; entries: LeaderboardEntry[] }>(
+        `/study/leaderboard?period=${period}`,
+      ),
   },
 };

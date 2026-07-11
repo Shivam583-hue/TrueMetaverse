@@ -3,12 +3,9 @@ import type { SpaceDetail } from "../lib/api";
 
 export const TILE = 32;
 
-export type EditMode = "off" | "place" | "erase";
-
 export type ArenaCallbacks = {
   onSceneReady: () => void;
   onMoveAttempt: (x: number, y: number) => void;
-  onTileClick: (x: number, y: number) => void;
 };
 
 type Person = {
@@ -20,25 +17,24 @@ type Person = {
   y: number;
 };
 
-const AVATAR_SIZE = 26;
+// portrait character sprites, displayed a bit taller than a tile
+const AVATAR_H = 44;
 
 export class ArenaScene extends Phaser.Scene {
   private widthTiles: number;
   private heightTiles: number;
+  private mapImage: string | null;
   private spaceElements: SpaceDetail["elements"];
 
   private blocked = new Set<string>();
-  private elementImages: Phaser.GameObjects.Image[] = [];
 
   private local: Person | null = null;
+  private localTimer: Phaser.GameObjects.Text | null = null;
   private localMoving = false;
   private remotes = new Map<string, Person>();
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
-
-  private editMode: EditMode = "off";
-  private editCursor: Phaser.GameObjects.Rectangle | null = null;
 
   constructor(
     detail: SpaceDetail,
@@ -48,11 +44,15 @@ export class ArenaScene extends Phaser.Scene {
     const [w, h] = detail.dimensions.split("x").map(Number);
     this.widthTiles = w!;
     this.heightTiles = h!;
+    this.mapImage = detail.mapImage;
     this.spaceElements = detail.elements;
   }
 
   preload() {
     this.load.setCORS("anonymous");
+    if (this.mapImage) {
+      this.load.image("map-bg", this.mapImage);
+    }
     for (const se of this.spaceElements) {
       this.load.image(`el-${se.element.id}`, se.element.imageUrl);
     }
@@ -62,25 +62,31 @@ export class ArenaScene extends Phaser.Scene {
     const worldW = this.widthTiles * TILE;
     const worldH = this.heightTiles * TILE;
 
-    this.cameras.main.setBounds(0, 0, worldW, worldH);
-    this.cameras.main.setBackgroundColor("#14162b");
+    // everything beyond the room is void
+    this.cameras.main.setBackgroundColor("#07080f");
+    // centerOn: keep a room smaller than the window centered in it
+    this.cameras.main.setBounds(0, 0, worldW, worldH, true);
 
-    const grid = this.add.graphics();
-    grid.fillStyle(0x1a1d38, 1);
-    grid.fillRect(0, 0, worldW, worldH);
-    grid.lineStyle(1, 0x272b52, 1);
-    for (let x = 0; x <= this.widthTiles; x++) {
-      grid.lineBetween(x * TILE, 0, x * TILE, worldH);
-    }
-    for (let y = 0; y <= this.heightTiles; y++) {
-      grid.lineBetween(0, y * TILE, worldW, y * TILE);
+    if (this.textures.exists("map-bg")) {
+      this.add.image(0, 0, "map-bg").setOrigin(0).setDisplaySize(worldW, worldH).setDepth(0);
+    } else {
+      const grid = this.add.graphics();
+      grid.fillStyle(0x1a1d38, 1);
+      grid.fillRect(0, 0, worldW, worldH);
+      grid.lineStyle(1, 0x272b52, 1);
+      for (let x = 0; x <= this.widthTiles; x++) {
+        grid.lineBetween(x * TILE, 0, x * TILE, worldH);
+      }
+      for (let y = 0; y <= this.heightTiles; y++) {
+        grid.lineBetween(0, y * TILE, worldW, y * TILE);
+      }
     }
 
-    // fallback avatar texture: a coin-colored rounded square
+    // fallback avatar: a coin-colored rounded card until the real look loads
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     g.fillStyle(0xffc53d, 1);
-    g.fillRoundedRect(0, 0, AVATAR_SIZE, AVATAR_SIZE, 6);
-    g.generateTexture("av-fallback", AVATAR_SIZE, AVATAR_SIZE);
+    g.fillRoundedRect(0, 0, 30, AVATAR_H, 6);
+    g.generateTexture("av-fallback", 30, AVATAR_H);
     g.destroy();
 
     this.drawElements();
@@ -88,35 +94,11 @@ export class ArenaScene extends Phaser.Scene {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = this.input.keyboard!.addKeys("W,A,S,D") as ArenaScene["wasd"];
 
-    this.editCursor = this.add
-      .rectangle(0, 0, TILE, TILE, 0xffc53d, 0.25)
-      .setStrokeStyle(1, 0xffc53d)
-      .setOrigin(0)
-      .setVisible(false)
-      .setDepth(50);
-
-    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      if (this.editMode === "off" || !this.editCursor) return;
-      const world = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
-      const tx = Math.floor(world.x / TILE);
-      const ty = Math.floor(world.y / TILE);
-      this.editCursor.setPosition(tx * TILE, ty * TILE);
-      this.editCursor.setVisible(this.inBounds(tx, ty));
-    });
-
-    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      if (this.editMode === "off") return;
-      const world = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
-      const tx = Math.floor(world.x / TILE);
-      const ty = Math.floor(world.y / TILE);
-      if (this.inBounds(tx, ty)) this.callbacks.onTileClick(tx, ty);
-    });
-
     this.callbacks.onSceneReady();
   }
 
   update() {
-    if (!this.local || this.localMoving || this.editMode !== "off") return;
+    if (!this.local || this.localMoving) return;
 
     let dx = 0;
     let dy = 0;
@@ -145,7 +127,28 @@ export class ArenaScene extends Phaser.Scene {
 
   spawnLocal(x: number, y: number, userId: string) {
     this.local = this.makePerson(x, y, userId, "you");
+    this.localTimer = this.add
+      .text(0, -44, "", {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: "11px",
+        color: "#ffc53d",
+        backgroundColor: "#14162bcc",
+        padding: { x: 4, y: 1 },
+      })
+      .setOrigin(0.5, 0.5)
+      .setResolution(2)
+      .setVisible(false);
+    this.local.container.add(this.localTimer);
     this.cameras.main.startFollow(this.local.container, true, 0.15, 0.15);
+  }
+
+  setLocalTimer(text: string | null) {
+    if (!this.localTimer) return;
+    if (text === null) {
+      this.localTimer.setVisible(false);
+    } else {
+      this.localTimer.setText(`< ${text} >`).setVisible(true);
+    }
   }
 
   addRemote(id: string, userId: string, x: number, y: number) {
@@ -190,37 +193,6 @@ export class ArenaScene extends Phaser.Scene {
     }
   }
 
-  setElements(elements: SpaceDetail["elements"]) {
-    this.spaceElements = elements;
-    const missing = elements.filter((se) => !this.textures.exists(`el-${se.element.id}`));
-    if (missing.length > 0) {
-      for (const se of missing) this.load.image(`el-${se.element.id}`, se.element.imageUrl);
-      this.load.once(Phaser.Loader.Events.COMPLETE, () => this.drawElements());
-      this.load.start();
-    } else {
-      this.drawElements();
-    }
-  }
-
-  setEditMode(mode: EditMode) {
-    this.editMode = mode;
-    if (mode === "off" && this.editCursor) this.editCursor.setVisible(false);
-  }
-
-  elementAt(x: number, y: number): string | null {
-    for (const se of this.spaceElements) {
-      if (
-        x >= se.x &&
-        x < se.x + se.element.width &&
-        y >= se.y &&
-        y < se.y + se.element.height
-      ) {
-        return se.id;
-      }
-    }
-    return null;
-  }
-
   // ---------- internals ----------
 
   private inBounds(x: number, y: number) {
@@ -228,19 +200,15 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private drawElements() {
-    for (const img of this.elementImages) img.destroy();
-    this.elementImages = [];
     this.blocked.clear();
-
     for (const se of this.spaceElements) {
       const key = `el-${se.element.id}`;
       if (this.textures.exists(key)) {
-        const img = this.add
+        this.add
           .image(se.x * TILE, se.y * TILE, key)
           .setOrigin(0)
           .setDisplaySize(se.element.width * TILE, se.element.height * TILE)
           .setDepth(1);
-        this.elementImages.push(img);
       }
       if (se.element.static) {
         for (let dx = 0; dx < se.element.width; dx++) {
@@ -253,11 +221,10 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private makePerson(x: number, y: number, userId: string, labelText: string): Person {
-    const sprite = this.add
-      .image(0, -6, "av-fallback")
-      .setDisplaySize(AVATAR_SIZE, AVATAR_SIZE);
+    const sprite = this.add.image(0, -10, "av-fallback");
+    sprite.setDisplaySize(30, AVATAR_H);
     const label = this.add
-      .text(0, 14, labelText, {
+      .text(0, 18, labelText, {
         fontFamily: '"JetBrains Mono", monospace',
         fontSize: "10px",
         color: "#e9eaf6",
@@ -275,9 +242,11 @@ export class ArenaScene extends Phaser.Scene {
   private applyAvatar(person: Person, url: string) {
     const key = `av-${person.userId}`;
     const swap = () => {
-      if (person.sprite.active) {
-        person.sprite.setTexture(key).setDisplaySize(AVATAR_SIZE, AVATAR_SIZE);
-      }
+      if (!person.sprite.active || !this.textures.exists(key)) return;
+      person.sprite.setTexture(key);
+      // scale to a fixed height, keep the sprite's own aspect ratio
+      const src = this.textures.get(key).getSourceImage() as { width: number; height: number };
+      person.sprite.setDisplaySize(AVATAR_H * (src.width / src.height), AVATAR_H);
     };
     if (this.textures.exists(key)) {
       swap();
