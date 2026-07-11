@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
 import { RoomManager } from "./RoomManager";
-import type { IncomingMessage, OutgoingMessage } from "./types";
+import type { IncomingMessage, OutgoingMessage } from "@repo/types";
 import client from "@repo/db/client";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { JWT_PASSWORD } from "./config";
@@ -18,8 +18,8 @@ export class User {
   public id: string;
   public userId?: string;
   private spaceId?: string;
-  private x: number;
-  private y: number;
+  public x: number;
+  public y: number;
   private ws: WebSocket;
 
   constructor(ws: WebSocket) {
@@ -70,14 +70,15 @@ export class User {
                 x: this.x,
                 y: this.y
               },
-              users: RoomManager.getInstance().rooms.get(spaceId)?.filter(x => x.id !== this.id)?.map((u) => ({ id: u.id })) ?? []
+              users: RoomManager.getInstance().rooms.get(spaceId)?.filter(x => x.id !== this.id)?.map((u) => ({ id: u.id, userId: u.userId!, x: u.x, y: u.y })) ?? []
             }
           });
           console.log("jouin receiverdf5")
           RoomManager.getInstance().broadcast({
             type: "user-joined",
             payload: {
-              userId: this.userId,
+              id: this.id,
+              userId: this.userId!,
               x: this.x,
               y: this.y
             }
@@ -94,6 +95,8 @@ export class User {
             RoomManager.getInstance().broadcast({
               type: "movement",
               payload: {
+                id: this.id,
+                userId: this.userId!,
                 x: this.x,
                 y: this.y
               }
@@ -117,7 +120,8 @@ export class User {
     RoomManager.getInstance().broadcast({
       type: "user-left",
       payload: {
-        userId: this.userId
+        id: this.id,
+        userId: this.userId!
       }
     }, this, this.spaceId!);
     RoomManager.getInstance().removeUser(this, this.spaceId!);

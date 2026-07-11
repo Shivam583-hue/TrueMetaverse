@@ -1,0 +1,11 @@
+{
+  "name": "@repo/types",
+  "module": "index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

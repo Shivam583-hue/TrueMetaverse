@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@repo/db": "*",
+    "@repo/types": "*",
     "jsonwebtoken": "^9.0.3",
     "ws": "^8.21.0"
   }

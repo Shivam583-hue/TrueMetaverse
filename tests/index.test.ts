@@ -1358,10 +1358,15 @@ describe("Websocket tests", () => {
     expect(message2.type).toBe("space-joined")
     expect(message1.payload.users.length).toBe(0)
     expect(message2.payload.users.length).toBe(1)
+    expect(message2.payload.users[0].userId).toBe(adminUserId);
+    expect(message2.payload.users[0].id).toBeDefined();
+    expect(message2.payload.users[0].x).toBe(message1.payload.spawn.x);
+    expect(message2.payload.users[0].y).toBe(message1.payload.spawn.y);
     expect(message3.type).toBe("user-joined");
     expect(message3.payload.x).toBe(message2.payload.spawn.x);
     expect(message3.payload.y).toBe(message2.payload.spawn.y);
     expect(message3.payload.userId).toBe(userId);
+    expect(message3.payload.id).toBeDefined();
 
     adminX = message1.payload.spawn.x
     adminY = message1.payload.spawn.y
@@ -1414,6 +1419,8 @@ describe("Websocket tests", () => {
     expect(message.type).toBe("movement")
     expect(message.payload.x).toBe(adminX + 1)
     expect(message.payload.y).toBe(adminY)
+    expect(message.payload.userId).toBe(adminUserId)
+    expect(message.payload.id).toBeDefined()
   })
 
   test("If a user leaves, the other user receives a leave event", async () => {
