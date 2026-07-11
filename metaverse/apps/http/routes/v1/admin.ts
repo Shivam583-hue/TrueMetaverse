@@ -58,6 +58,66 @@ adminRouter.post("/avatar", async (req, res) => {
   res.json({ avatarId: avatar.id })
 })
 
+adminRouter.put("/avatar/:avatarId", async (req, res) => {
+  const parsedData = UpdateAvatarSchema.safeParse(req.body)
+  if (!parsedData.success) {
+    res.status(400).json({ message: "Validation failed" })
+    return
+  }
+
+  const avatar = await client.avatar.findUnique({
+    where: {
+      id: req.params.avatarId
+    }
+  })
+  if (!avatar) {
+    res.status(400).json({ message: "Avatar not found" })
+    return
+  }
+
+  await client.avatar.update({
+    where: {
+      id: req.params.avatarId
+    },
+    data: {
+      name: parsedData.data.name,
+      imageUrl: parsedData.data.imageUrl
+    }
+  })
+
+  res.json({ message: "Avatar updated" })
+})
+
+adminRouter.delete("/avatar/:avatarId", async (req, res) => {
+  const avatar = await client.avatar.findUnique({
+    where: {
+      id: req.params.avatarId
+    }
+  })
+  if (!avatar) {
+    res.status(400).json({ message: "Avatar not found" })
+    return
+  }
+
+  await client.$transaction(async (tx) => {
+    await tx.user.updateMany({
+      where: {
+        avatarId: req.params.avatarId
+      },
+      data: {
+        avatarId: null
+      }
+    })
+    await tx.avatar.delete({
+      where: {
+        id: req.params.avatarId
+      }
+    })
+  })
+
+  res.json({ message: "Avatar deleted" })
+})
+
 adminRouter.post("/map", async (req, res) => {
   const parsedData = CreateMapSchema.safeParse(req.body)
   if (!parsedData.success) {
