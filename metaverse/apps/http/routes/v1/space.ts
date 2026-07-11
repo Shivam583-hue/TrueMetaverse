@@ -118,10 +118,17 @@ spaceRouter.delete("/:spaceId", userMiddleware, async (req, res) => {
     return
   }
 
-  await client.space.delete({
-    where: {
-      id: req.params.spaceId as string
-    }
+  await client.$transaction(async (tx) => {
+    await tx.spaceElements.deleteMany({
+      where: {
+        spaceId: req.params.spaceId as string
+      }
+    })
+    await tx.space.delete({
+      where: {
+        id: req.params.spaceId as string
+      }
+    })
   })
   res.json({ message: "Space deleted" })
 })

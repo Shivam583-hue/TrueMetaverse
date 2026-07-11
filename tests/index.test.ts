@@ -399,6 +399,26 @@ describe("Space information", () => {
     expect(deleteReponse.status).toBe(200)
   })
 
+  test("User is able to delete a space that contains elements", async () => {
+    const response = await axios.post(`${BACKEND_URL}/api/v1/space`, {
+      "name": "Test",
+      "dimensions": "100x200",
+      "mapId": mapId
+    }, {
+      headers: {
+        authorization: `Bearer ${userToken}`
+      }
+    })
+
+    const deleteReponse = await axios.delete(`${BACKEND_URL}/api/v1/space/${response.data.spaceId}`, {
+      headers: {
+        authorization: `Bearer ${userToken}`
+      }
+    })
+
+    expect(deleteReponse.status).toBe(200)
+  })
+
   test("User should not be able to delete a space created by another user", async () => {
     const response = await axios.post(`${BACKEND_URL}/api/v1/space`, {
       "name": "Test",
