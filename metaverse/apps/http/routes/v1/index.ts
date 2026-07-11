@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { userRouter } from "./user";
 import { spaceRouter } from "./space";
-import { adminRouter } from "./admin";
+import { studyRouter } from "./study";
 import { SigninSchema, SignupSchema } from "../../types";
 import { hash, compare } from "../../scrypt";
 import client from "@repo/db/client";
@@ -11,11 +11,8 @@ import { JWT_PASSWORD } from "../../config";
 export const router = Router();
 
 router.post("/signup", async (req, res) => {
-  console.log("inside signup")
-  // check the user
   const parsedData = SignupSchema.safeParse(req.body)
   if (!parsedData.success) {
-    console.log("parsed data incorrect")
     res.status(400).json({ message: "Validation failed" })
     return
   }
@@ -34,8 +31,6 @@ router.post("/signup", async (req, res) => {
       userId: user.id
     })
   } catch (e) {
-    console.log("erroer thrown")
-    console.log(e)
     res.status(400).json({ message: "User already exists" })
   }
 })
@@ -78,20 +73,6 @@ router.post("/signin", async (req, res) => {
   }
 })
 
-router.get("/elements", async (req, res) => {
-  const elements = await client.element.findMany()
-
-  res.json({
-    elements: elements.map(e => ({
-      id: e.id,
-      imageUrl: e.imageUrl,
-      width: e.width,
-      height: e.height,
-      static: e.static
-    }))
-  })
-})
-
 router.get("/avatars", async (req, res) => {
   const avatars = await client.avatar.findMany()
   res.json({
@@ -104,35 +85,19 @@ router.get("/avatars", async (req, res) => {
 })
 
 router.get("/maps", async (req, res) => {
-  const maps = await client.map.findMany({
-    include: {
-      mapElements: {
-        include: {
-          element: true
-        }
-      }
-    }
-  })
+  const maps = await client.map.findMany()
 
   res.json({
     maps: maps.map(m => ({
       id: m.id,
       name: m.name,
       thumbnail: m.thumbnail,
+      mapImage: m.mapImage,
       dimensions: `${m.width}x${m.height}`,
-      defaultElements: m.mapElements.map(e => ({
-        elementId: e.element.id,
-        imageUrl: e.element.imageUrl,
-        width: e.element.width,
-        height: e.element.height,
-        static: e.element.static,
-        x: e.x,
-        y: e.y
-      }))
     }))
   })
 })
 
 router.use("/user", userRouter)
 router.use("/space", spaceRouter)
-router.use("/admin", adminRouter)
+router.use("/study", studyRouter)

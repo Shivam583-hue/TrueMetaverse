@@ -18,6 +18,8 @@ export class User {
   public id: string;
   public userId?: string;
   private spaceId?: string;
+  private spaceWidth = 0;
+  private spaceHeight = 0;
   public x: number;
   public y: number;
   private ws: WebSocket;
@@ -32,13 +34,9 @@ export class User {
 
   initHandlers() {
     this.ws.on("message", async (data: any) => {
-      console.log(data)
       const parsedData = JSON.parse(data.toString()) as IncomingMessage;
-      console.log(parsedData)
-      console.log("parsedData")
       switch (parsedData.type) {
         case "join":
-          console.log("jouin receiverdfd")
           const spaceId = parsedData.payload.spaceId;
           const token = parsedData.payload.token;
           const userId = (jwt.verify(token, JWT_PASSWORD) as JwtPayload).userId
@@ -46,20 +44,19 @@ export class User {
             this.ws.close()
             return
           }
-          console.log("jouin receiverdfd 2")
           this.userId = userId
           const space = await client.space.findFirst({
             where: {
               id: spaceId
             }
           })
-          console.log("jouin receiverdfd 3")
           if (!space) {
             this.ws.close()
             return;
           }
-          console.log("jouin receiverdfd 4")
           this.spaceId = spaceId
+          this.spaceWidth = space.width;
+          this.spaceHeight = space.height;
           RoomManager.getInstance().addUser(spaceId, this);
           this.x = Math.floor(Math.random() * space?.width);
           this.y = Math.floor(Math.random() * space?.height);
@@ -73,7 +70,6 @@ export class User {
               users: RoomManager.getInstance().rooms.get(spaceId)?.filter(x => x.id !== this.id)?.map((u) => ({ id: u.id, userId: u.userId!, x: u.x, y: u.y })) ?? []
             }
           });
-          console.log("jouin receiverdf5")
           RoomManager.getInstance().broadcast({
             type: "user-joined",
             payload: {
@@ -89,7 +85,10 @@ export class User {
           const moveY = parsedData.payload.y;
           const xDisplacement = Math.abs(this.x - moveX);
           const yDisplacement = Math.abs(this.y - moveY);
-          if ((xDisplacement == 1 && yDisplacement == 0) || (xDisplacement == 0 && yDisplacement == 1)) {
+          const insideBounds =
+            moveX >= 0 && moveX < this.spaceWidth &&
+            moveY >= 0 && moveY < this.spaceHeight;
+          if (insideBounds && ((xDisplacement == 1 && yDisplacement == 0) || (xDisplacement == 0 && yDisplacement == 1))) {
             this.x = moveX;
             this.y = moveY;
             RoomManager.getInstance().broadcast({

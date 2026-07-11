@@ -13,13 +13,14 @@ datasource db {
 }
 
 model User {
-  id       String  @id @unique @default(cuid())
-  username String  @unique
-  password String
-  avatarId String?
-  role     Role
-  spaces   Space[]
-  avatar    Avatar? @relation(fields: [avatarId], references: [id])
+  id            String         @id @unique @default(cuid())
+  username      String         @unique
+  password      String
+  avatarId      String?
+  role          Role
+  spaces        Space[]
+  avatar        Avatar?        @relation(fields: [avatarId], references: [id])
+  studySessions StudySession[]
 }
 
 model Space {
@@ -28,9 +29,24 @@ model Space {
   width     Int
   height    Int
   thumbnail String?
+  mapImage  String?
+  code      String  @unique
+  official  Boolean @default(false)
   creatorId String
   creator     User    @relation(fields: [creatorId], references: [id])
   elements  spaceElements[]
+}
+
+model StudySession {
+  id              String    @id @unique @default(cuid())
+  userId          String
+  spaceId         String?
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  durationSeconds Int?
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@index([userId, endedAt])
 }
 
 model spaceElements {
@@ -59,6 +75,7 @@ model Map {
   height Int
   name   String
   thumbnail String
+  mapImage  String?
   mapElements MapElements[]
 }
 
