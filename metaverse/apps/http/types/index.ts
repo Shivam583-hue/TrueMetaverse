@@ -59,6 +59,22 @@ export const CreateMapSchema = z.object({
   }))
 })
 
+export const UpdateMapSchema = z.object({
+  thumbnail: z.string().optional(),
+  dimensions: z.string().regex(/^[0-9]{1,4}x[0-9]{1,4}$/).optional(),
+  name: z.string().optional(),
+  defaultElements: z.array(z.object({
+    elementId: z.string(),
+    x: z.number(),
+    y: z.number(),
+  })).optional()
+})
+
+export const UpdateAvatarSchema = z.object({
+  name: z.string().optional(),
+  imageUrl: z.string().optional(),
+})
+
 
 declare global {
   namespace Express {

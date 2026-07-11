@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { adminMiddleware } from "../../middleware/admin";
-import { AddElementSchema, CreateAvatarSchema, CreateElementSchema, CreateMapSchema, UpdateElementSchema } from "../../types";
+import { AddElementSchema, CreateAvatarSchema, CreateElementSchema, CreateMapSchema, UpdateElementSchema, UpdateMapSchema, UpdateAvatarSchema } from "../../types";
 import client from "@repo/db/client";
 export const adminRouter = Router();
 adminRouter.use(adminMiddleware)
@@ -83,4 +83,83 @@ adminRouter.post("/map", async (req, res) => {
   res.json({
     id: map.id
   })
+})
+
+adminRouter.put("/map/:mapId", async (req, res) => {
+  const parsedData = UpdateMapSchema.safeParse(req.body)
+  if (!parsedData.success) {
+    res.status(400).json({ message: "Validation failed" })
+    return
+  }
+
+  const map = await client.map.findUnique({
+    where: {
+      id: req.params.mapId
+    }
+  })
+  if (!map) {
+    res.status(400).json({ message: "Map not found" })
+    return
+  }
+
+  const dimensions = parsedData.data.dimensions
+
+  await client.$transaction(async (tx) => {
+    await tx.map.update({
+      where: {
+        id: req.params.mapId
+      },
+      data: {
+        name: parsedData.data.name,
+        thumbnail: parsedData.data.thumbnail,
+        width: dimensions ? parseInt(dimensions.split("x")[0]!) : undefined,
+        height: dimensions ? parseInt(dimensions.split("x")[1]!) : undefined,
+      }
+    })
+
+    if (parsedData.data.defaultElements) {
+      await tx.mapElements.deleteMany({
+        where: {
+          mapId: req.params.mapId
+        }
+      })
+      await tx.mapElements.createMany({
+        data: parsedData.data.defaultElements.map(e => ({
+          mapId: req.params.mapId as string,
+          elementId: e.elementId,
+          x: e.x,
+          y: e.y
+        }))
+      })
+    }
+  })
+
+  res.json({ message: "Map updated" })
+})
+
+adminRouter.delete("/map/:mapId", async (req, res) => {
+  const map = await client.map.findUnique({
+    where: {
+      id: req.params.mapId
+    }
+  })
+  if (!map) {
+    res.status(400).json({ message: "Map not found" })
+    return
+  }
+
+  await client.$transaction(async (tx) => {
+    await tx.mapElements.deleteMany({
+      where: {
+        mapId: req.params.mapId
+      }
+    })
+    await tx.map.delete({
+      where: {
+        id: req.params.mapId
+      }
+    })
+  })
+
+  res.json({ message: "Map deleted" })
 })

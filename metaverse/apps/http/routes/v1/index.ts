@@ -103,6 +103,36 @@ router.get("/avatars", async (req, res) => {
   })
 })
 
+router.get("/maps", async (req, res) => {
+  const maps = await client.map.findMany({
+    include: {
+      mapElements: {
+        include: {
+          element: true
+        }
+      }
+    }
+  })
+
+  res.json({
+    maps: maps.map(m => ({
+      id: m.id,
+      name: m.name,
+      thumbnail: m.thumbnail,
+      dimensions: `${m.width}x${m.height}`,
+      defaultElements: m.mapElements.map(e => ({
+        elementId: e.element.id,
+        imageUrl: e.element.imageUrl,
+        width: e.element.width,
+        height: e.element.height,
+        static: e.element.static,
+        x: e.x,
+        y: e.y
+      }))
+    }))
+  })
+})
+
 router.use("/user", userRouter)
 router.use("/space", spaceRouter)
 router.use("/admin", adminRouter)
