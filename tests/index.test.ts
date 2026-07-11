@@ -784,6 +784,392 @@ describe("Admin Endpoints", () => {
 
     expect(updateElementResponse.status).toBe(200);
 
+    const elementsResponse = await axios.get(`${BACKEND_URL}/api/v1/elements`);
+    const updatedElement = elementsResponse.data.elements.find(x => x.id == elementResponse.data.id);
+    expect(updatedElement.imageUrl).toBe("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQm3RFDZM21teuCMFYx_AROjt-AzUwDBROFww&s")
+  })
+});
+
+describe("Map management endpoints", () => {
+  let adminToken;
+  let userToken;
+  let element1Id;
+  let element2Id;
+  let mapId;
+
+  beforeAll(async () => {
+    const username = `kirat-${Math.random()}`
+    const password = "123456"
+
+    const signupResponse = await axios.post(`${BACKEND_URL}/api/v1/signup`, {
+      username,
+      password,
+      type: "admin"
+    });
+
+    const signinResponse = await axios.post(`${BACKEND_URL}/api/v1/signin`, {
+      username,
+      password
+    })
+    adminToken = signinResponse.data.token
+
+    const userSignupResponse = await axios.post(`${BACKEND_URL}/api/v1/signup`, {
+      username: username + "-user",
+      password,
+      type: "user"
+    });
+
+    const userSigninResponse = await axios.post(`${BACKEND_URL}/api/v1/signin`, {
+      username: username + "-user",
+      password
+    })
+    userToken = userSigninResponse.data.token
+
+    const element1Response = await axios.post(`${BACKEND_URL}/api/v1/admin/element`, {
+      "imageUrl": "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcRCRca3wAR4zjPPTzeIY9rSwbbqB6bB2hVkoTXN4eerXOIkJTG1GpZ9ZqSGYafQPToWy_JTcmV5RHXsAsWQC3tKnMlH_CsibsSZ5oJtbakq&usqp=CAE",
+      "width": 1,
+      "height": 1,
+      "static": true
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    });
+    element1Id = element1Response.data.id
+
+    const element2Response = await axios.post(`${BACKEND_URL}/api/v1/admin/element`, {
+      "imageUrl": "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcRCRca3wAR4zjPPTzeIY9rSwbbqB6bB2hVkoTXN4eerXOIkJTG1GpZ9ZqSGYafQPToWy_JTcmV5RHXsAsWQC3tKnMlH_CsibsSZ5oJtbakq&usqp=CAE",
+      "width": 1,
+      "height": 1,
+      "static": true
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    });
+    element2Id = element2Response.data.id
+
+    const mapResponse = await axios.post(`${BACKEND_URL}/api/v1/admin/map`, {
+      "thumbnail": "https://thumbnail.com/a.png",
+      "dimensions": "100x200",
+      "name": "Test map",
+      "defaultElements": [{
+        elementId: element1Id,
+        x: 20,
+        y: 20
+      }, {
+        elementId: element2Id,
+        x: 19,
+        y: 20
+      }]
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+    mapId = mapResponse.data.id
+  });
+
+  test("Newly created map shows up in the list of maps with its default elements", async () => {
+    const response = await axios.get(`${BACKEND_URL}/api/v1/maps`);
+
+    expect(response.status).toBe(200)
+    const createdMap = response.data.maps.find(x => x.id == mapId);
+    expect(createdMap).toBeDefined()
+    expect(createdMap.name).toBe("Test map")
+    expect(createdMap.dimensions).toBe("100x200")
+    expect(createdMap.defaultElements.length).toBe(2)
+  })
+
+  test("Listing maps does not require authentication", async () => {
+    const response = await axios.get(`${BACKEND_URL}/api/v1/maps`);
+    expect(response.status).toBe(200)
+  })
+
+  test("Non-admin cannot update a map", async () => {
+    const response = await axios.put(`${BACKEND_URL}/api/v1/admin/map/${mapId}`, {
+      name: "Hacked name"
+    }, {
+      headers: {
+        authorization: `Bearer ${userToken}`
+      }
+    })
+
+    expect(response.status).toBe(403)
+  })
+
+  test("Non-admin cannot delete a map", async () => {
+    const response = await axios.delete(`${BACKEND_URL}/api/v1/admin/map/${mapId}`, {
+      headers: {
+        authorization: `Bearer ${userToken}`
+      }
+    })
+
+    expect(response.status).toBe(403)
+  })
+
+  test("Admin can update a map's name, thumbnail and dimensions", async () => {
+    const response = await axios.put(`${BACKEND_URL}/api/v1/admin/map/${mapId}`, {
+      name: "Updated map name",
+      thumbnail: "https://thumbnail.com/updated.png",
+      dimensions: "50x60"
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+
+    expect(response.status).toBe(200)
+
+    const mapsResponse = await axios.get(`${BACKEND_URL}/api/v1/maps`);
+    const updatedMap = mapsResponse.data.maps.find(x => x.id == mapId);
+    expect(updatedMap.name).toBe("Updated map name")
+    expect(updatedMap.dimensions).toBe("50x60")
+  })
+
+  test("Admin can replace a map's default elements", async () => {
+    const response = await axios.put(`${BACKEND_URL}/api/v1/admin/map/${mapId}`, {
+      defaultElements: [{
+        elementId: element1Id,
+        x: 5,
+        y: 5
+      }]
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+
+    expect(response.status).toBe(200)
+
+    const mapsResponse = await axios.get(`${BACKEND_URL}/api/v1/maps`);
+    const updatedMap = mapsResponse.data.maps.find(x => x.id == mapId);
+    expect(updatedMap.defaultElements.length).toBe(1)
+    expect(updatedMap.defaultElements[0].elementId).toBe(element1Id)
+  })
+
+  test("Updating a map that doesn't exist returns 400", async () => {
+    const response = await axios.put(`${BACKEND_URL}/api/v1/admin/map/nonExistentMapId`, {
+      name: "Doesn't matter"
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+
+    expect(response.status).toBe(400)
+  })
+
+  test("Admin can delete a map and it disappears from the list", async () => {
+    const mapResponse = await axios.post(`${BACKEND_URL}/api/v1/admin/map`, {
+      "thumbnail": "https://thumbnail.com/a.png",
+      "dimensions": "100x200",
+      "name": "Throwaway map",
+      "defaultElements": []
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+    const throwawayMapId = mapResponse.data.id
+
+    const deleteResponse = await axios.delete(`${BACKEND_URL}/api/v1/admin/map/${throwawayMapId}`, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+    expect(deleteResponse.status).toBe(200)
+
+    const mapsResponse = await axios.get(`${BACKEND_URL}/api/v1/maps`);
+    const deletedMap = mapsResponse.data.maps.find(x => x.id == throwawayMapId);
+    expect(deletedMap).toBeUndefined()
+  })
+
+  test("Deleting a map that doesn't exist returns 400", async () => {
+    const response = await axios.delete(`${BACKEND_URL}/api/v1/admin/map/nonExistentMapId`, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+
+    expect(response.status).toBe(400)
+  })
+});
+
+describe("Avatar management endpoints", () => {
+  let adminToken;
+  let userToken;
+  let avatarId;
+
+  beforeAll(async () => {
+    const username = `kirat-${Math.random()}`
+    const password = "123456"
+
+    const signupResponse = await axios.post(`${BACKEND_URL}/api/v1/signup`, {
+      username,
+      password,
+      type: "admin"
+    });
+
+    const signinResponse = await axios.post(`${BACKEND_URL}/api/v1/signin`, {
+      username,
+      password
+    })
+    adminToken = signinResponse.data.token
+
+    const userSignupResponse = await axios.post(`${BACKEND_URL}/api/v1/signup`, {
+      username: username + "-user",
+      password,
+      type: "user"
+    });
+
+    const userSigninResponse = await axios.post(`${BACKEND_URL}/api/v1/signin`, {
+      username: username + "-user",
+      password
+    })
+    userToken = userSigninResponse.data.token
+
+    const avatarResponse = await axios.post(`${BACKEND_URL}/api/v1/admin/avatar`, {
+      "imageUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQm3RFDZM21teuCMFYx_AROjt-AzUwDBROFww&s",
+      "name": "Timmy"
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+    avatarId = avatarResponse.data.avatarId;
+  });
+
+  test("Non-admin cannot update an avatar", async () => {
+    const response = await axios.put(`${BACKEND_URL}/api/v1/admin/avatar/${avatarId}`, {
+      name: "Hacked name"
+    }, {
+      headers: {
+        authorization: `Bearer ${userToken}`
+      }
+    })
+
+    expect(response.status).toBe(403)
+  })
+
+  test("Non-admin cannot delete an avatar", async () => {
+    const response = await axios.delete(`${BACKEND_URL}/api/v1/admin/avatar/${avatarId}`, {
+      headers: {
+        authorization: `Bearer ${userToken}`
+      }
+    })
+
+    expect(response.status).toBe(403)
+  })
+
+  test("Admin can update an avatar's name and imageUrl", async () => {
+    const response = await axios.put(`${BACKEND_URL}/api/v1/admin/avatar/${avatarId}`, {
+      name: "Tommy",
+      imageUrl: "https://thumbnail.com/tommy.png"
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+
+    expect(response.status).toBe(200)
+
+    const avatarsResponse = await axios.get(`${BACKEND_URL}/api/v1/avatars`);
+    const updatedAvatar = avatarsResponse.data.avatars.find(x => x.id == avatarId);
+    expect(updatedAvatar.name).toBe("Tommy")
+    expect(updatedAvatar.imageUrl).toBe("https://thumbnail.com/tommy.png")
+  })
+
+  test("Updating an avatar that doesn't exist returns 400", async () => {
+    const response = await axios.put(`${BACKEND_URL}/api/v1/admin/avatar/nonExistentAvatarId`, {
+      name: "Doesn't matter"
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+
+    expect(response.status).toBe(400)
+  })
+
+  test("Admin can delete an avatar and it disappears from the list", async () => {
+    const avatarResponse = await axios.post(`${BACKEND_URL}/api/v1/admin/avatar`, {
+      "imageUrl": "https://thumbnail.com/throwaway.png",
+      "name": "Throwaway"
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+    const throwawayAvatarId = avatarResponse.data.avatarId
+
+    const deleteResponse = await axios.delete(`${BACKEND_URL}/api/v1/admin/avatar/${throwawayAvatarId}`, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+    expect(deleteResponse.status).toBe(200)
+
+    const avatarsResponse = await axios.get(`${BACKEND_URL}/api/v1/avatars`);
+    const deletedAvatar = avatarsResponse.data.avatars.find(x => x.id == throwawayAvatarId);
+    expect(deletedAvatar).toBeUndefined()
+  })
+
+  test("Deleting an avatar clears it from users who had it equipped", async () => {
+    const username = `kirat-${Math.random()}`
+    const password = "123456"
+
+    const signupResponse = await axios.post(`${BACKEND_URL}/api/v1/signup`, {
+      username,
+      password,
+      type: "user"
+    });
+    const wearerId = signupResponse.data.userId
+
+    const signinResponse = await axios.post(`${BACKEND_URL}/api/v1/signin`, {
+      username,
+      password
+    })
+    const wearerToken = signinResponse.data.token
+
+    const avatarResponse = await axios.post(`${BACKEND_URL}/api/v1/admin/avatar`, {
+      "imageUrl": "https://thumbnail.com/wearable.png",
+      "name": "Wearable"
+    }, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+    const wearableAvatarId = avatarResponse.data.avatarId
+
+    await axios.post(`${BACKEND_URL}/api/v1/user/metadata`, {
+      avatarId: wearableAvatarId
+    }, {
+      headers: {
+        authorization: `Bearer ${wearerToken}`
+      }
+    })
+
+    const deleteResponse = await axios.delete(`${BACKEND_URL}/api/v1/admin/avatar/${wearableAvatarId}`, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+    expect(deleteResponse.status).toBe(200)
+
+    const bulkResponse = await axios.get(`${BACKEND_URL}/api/v1/user/metadata/bulk?ids=[${wearerId}]`);
+    const wearerMetadata = bulkResponse.data.avatars.find(x => x.userId == wearerId);
+    expect(wearerMetadata.avatarId).toBeUndefined()
+  })
+
+  test("Deleting an avatar that doesn't exist returns 400", async () => {
+    const response = await axios.delete(`${BACKEND_URL}/api/v1/admin/avatar/nonExistentAvatarId`, {
+      headers: {
+        authorization: `Bearer ${adminToken}`
+      }
+    })
+
+    expect(response.status).toBe(400)
   })
 });
 
