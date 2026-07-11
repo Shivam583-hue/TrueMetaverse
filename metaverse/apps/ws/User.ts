@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
 import { RoomManager } from "./RoomManager";
-import type { OutgoingMessage } from "./types";
+import type { IncomingMessage, OutgoingMessage } from "./types";
 import client from "@repo/db/client";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { JWT_PASSWORD } from "./config";
@@ -33,7 +33,7 @@ export class User {
   initHandlers() {
     this.ws.on("message", async (data: any) => {
       console.log(data)
-      const parsedData = JSON.parse(data.toString());
+      const parsedData = JSON.parse(data.toString()) as IncomingMessage;
       console.log(parsedData)
       console.log("parsedData")
       switch (parsedData.type) {
