@@ -2,8 +2,15 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import type Phaser from "phaser";
 import { createSpaceGame } from "../game/main";
 import { EventBus, SpaceEvent } from "../game/EventBus";
+import type { WokaAppearance } from "../game/woka/wokaConfig";
 
-export default function GameCanvas({ playerName }: { playerName: string }) {
+export default function GameCanvas({
+  playerName,
+  appearance,
+}: {
+  playerName: string;
+  appearance?: WokaAppearance;
+}) {
   const parentRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
 
@@ -18,13 +25,16 @@ export default function GameCanvas({ playerName }: { playerName: string }) {
   }, []);
 
   useEffect(() => {
-    const announce = () => EventBus.emit(SpaceEvent.PlayerName, playerName);
+    const announce = () => {
+      EventBus.emit(SpaceEvent.PlayerName, playerName);
+      if (appearance) EventBus.emit(SpaceEvent.PlayerAppearance, appearance);
+    };
     EventBus.on(SpaceEvent.SceneReady, announce);
     announce();
     return () => {
       EventBus.off(SpaceEvent.SceneReady, announce);
     };
-  }, [playerName]);
+  }, [playerName, appearance]);
 
   return <div ref={parentRef} className="space-canvas" />;
 }

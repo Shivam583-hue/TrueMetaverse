@@ -1,16 +1,18 @@
+import { WOKA_ASSET_BASE, WOKA_FILES } from "./wokaAssets";
+
 export type WokaLayer =
   | "body"
-  | "clothes"
   | "eyes"
   | "hair"
+  | "clothes"
   | "hat"
   | "accessory";
 
 export const DRAW_ORDER: WokaLayer[] = [
   "body",
-  "clothes",
   "eyes",
   "hair",
+  "clothes",
   "hat",
   "accessory",
 ];
@@ -18,7 +20,6 @@ export const DRAW_ORDER: WokaLayer[] = [
 export type WokaOption = {
   id: string;
   label: string;
-  color: string;
   url?: string;
 };
 
@@ -31,96 +32,33 @@ export type WokaLayerDef = {
 
 export type WokaAppearance = Record<WokaLayer, string>;
 
-const NONE: WokaOption = { id: "none", label: "None", color: "transparent" };
+const NONE: WokaOption = { id: "none", label: "None" };
 
-function opts(
-  prefix: string,
-  entries: [string, string][],
-): WokaOption[] {
-  return entries.map(([label, color]) => ({
-    id: `${prefix}-${label.toLowerCase()}`,
-    label,
-    color,
+const META: Record<WokaLayer, { label: string; optional: boolean }> = {
+  body: { label: "Skin", optional: false },
+  eyes: { label: "Eyes", optional: false },
+  hair: { label: "Hair", optional: true },
+  clothes: { label: "Clothes", optional: false },
+  hat: { label: "Hat", optional: true },
+  accessory: { label: "Extras", optional: true },
+};
+
+function buildLayer(layer: WokaLayer): WokaLayerDef {
+  const meta = META[layer];
+  const options: WokaOption[] = WOKA_FILES[layer]!.map((file, i) => ({
+    id: `${layer}-${i}`,
+    label: `${meta.label} ${i + 1}`,
+    url: `${WOKA_ASSET_BASE}/${layer}/${file}`,
   }));
+  return {
+    layer,
+    label: meta.label,
+    optional: meta.optional,
+    options: meta.optional ? [NONE, ...options] : options,
+  };
 }
 
-export const WOKA_LAYERS: WokaLayerDef[] = [
-  {
-    layer: "body",
-    label: "Skin",
-    optional: false,
-    options: opts("body", [
-      ["Light", "#f1c9a5"],
-      ["Tan", "#e0ac8b"],
-      ["Warm", "#c68863"],
-      ["Deep", "#8d5524"],
-      ["Cool", "#d8b59a"],
-    ]),
-  },
-  {
-    layer: "clothes",
-    label: "Clothes",
-    optional: false,
-    options: opts("clothes", [
-      ["Portal", "#3ee6c1"],
-      ["Coin", "#ffc53d"],
-      ["Rose", "#ff6b81"],
-      ["Sky", "#6f9bd8"],
-      ["Violet", "#9b8cff"],
-      ["Moon", "#e9eaf6"],
-    ]),
-  },
-  {
-    layer: "eyes",
-    label: "Eyes",
-    optional: false,
-    options: opts("eyes", [
-      ["Dark", "#2b2b2b"],
-      ["Blue", "#3a6ea5"],
-      ["Green", "#2e8b57"],
-      ["Amber", "#b5651d"],
-    ]),
-  },
-  {
-    layer: "hair",
-    label: "Hair",
-    optional: true,
-    options: [
-      NONE,
-      ...opts("hair", [
-        ["Black", "#2b2b2b"],
-        ["Brown", "#5a3a1a"],
-        ["Ginger", "#b5651d"],
-        ["Blond", "#e8c14a"],
-        ["Silver", "#c8c8d0"],
-        ["Rose", "#ff6b81"],
-      ]),
-    ],
-  },
-  {
-    layer: "hat",
-    label: "Hat",
-    optional: true,
-    options: [
-      NONE,
-      ...opts("hat", [
-        ["Cap", "#ff6b81"],
-        ["Beanie", "#3ee6c1"],
-        ["Night", "#14162b"],
-      ]),
-    ],
-  },
-  {
-    layer: "accessory",
-    label: "Extras",
-    optional: true,
-    options: [
-      NONE,
-      { id: "accessory-glasses", label: "Glasses", color: "#14162b" },
-      { id: "accessory-shades", label: "Shades", color: "#0a0a0a" },
-    ],
-  },
-];
+export const WOKA_LAYERS: WokaLayerDef[] = DRAW_ORDER.map(buildLayer);
 
 const BY_LAYER = new Map(WOKA_LAYERS.map((l) => [l.layer, l]));
 
@@ -134,10 +72,10 @@ export function optionOf(layer: WokaLayer, id: string): WokaOption {
 }
 
 export const DEFAULT_APPEARANCE: WokaAppearance = {
-  body: "body-light",
-  clothes: "clothes-portal",
-  eyes: "eyes-dark",
-  hair: "hair-brown",
+  body: "body-0",
+  eyes: "eyes-0",
+  hair: "hair-0",
+  clothes: "clothes-0",
   hat: "none",
   accessory: "none",
 };

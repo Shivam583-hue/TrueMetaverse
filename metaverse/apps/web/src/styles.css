@@ -444,6 +444,138 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
+.woka-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--dusk);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  max-width: 420px;
+}
+
+.woka-card canvas {
+  background: var(--midnight);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.woka-card .woka-card-text {
+  flex: 1;
+}
+
+.woka-card .woka-card-text .muted {
+  margin: 0.2rem 0 0.6rem;
+}
+
+.woka-modal {
+  max-width: 620px;
+}
+
+.woka-editor {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 1.25rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.woka-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--midnight);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 0.5rem;
+}
+
+.woka-stage canvas {
+  image-rendering: pixelated;
+}
+
+.woka-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.woka-tabs button {
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--fog);
+  cursor: pointer;
+}
+
+.woka-tabs button.active {
+  color: var(--coin);
+  border-color: var(--coin-deep);
+  background: var(--dusk-raised);
+}
+
+.woka-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 0.5rem;
+}
+
+.woka-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.25rem;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: var(--midnight);
+  cursor: pointer;
+}
+
+.woka-swatch.selected {
+  border-color: var(--coin);
+}
+
+.woka-chip {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 8px;
+  background:
+    repeating-conic-gradient(#20233f 0% 25%, #191b30 0% 50%) 50% / 12px 12px;
+}
+
+.woka-chip canvas {
+  image-rendering: pixelated;
+}
+
+.woka-none {
+  color: var(--fog);
+  font-size: 1.1rem;
+}
+
+.woka-swatch-label {
+  font-size: 0.68rem;
+  color: var(--fog);
+}
+
+.woka-swatch.selected .woka-swatch-label {
+  color: var(--coin);
+}
+
+@media (max-width: 560px) {
+  .woka-editor {
+    grid-template-columns: 1fr;
+  }
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -593,6 +725,19 @@ textarea:focus-visible {
   align-items: center;
   gap: 0.45rem;
   font-size: 0.82rem;
+}
+
+.online-woka {
+  width: 20px;
+  height: 30px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.topbar-woka {
+  width: 24px;
+  height: 36px;
+  image-rendering: pixelated;
 }
 
 .online-list img {

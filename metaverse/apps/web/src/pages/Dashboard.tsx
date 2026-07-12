@@ -2,17 +2,25 @@ import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import TopBar from "../components/TopBar";
+import WokaCustomizer from "../components/WokaCustomizer";
+import WokaPreview from "../components/WokaPreview";
 import { api, ApiError } from "../lib/api";
-import type { Avatar, MapTemplate, SpaceSummary } from "../lib/api";
+import type { MapTemplate, SpaceSummary } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import {
+  DEFAULT_APPEARANCE,
+  normalizeAppearance,
+  type WokaAppearance,
+} from "../game/woka/wokaConfig";
 
 export default function Dashboard() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const [official, setOfficial] = useState<SpaceSummary[]>([]);
   const [spaces, setSpaces] = useState<SpaceSummary[] | null>(null);
-  const [avatars, setAvatars] = useState<Avatar[]>([]);
-  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
+  const [appearance, setAppearance] =
+    useState<WokaAppearance>(DEFAULT_APPEARANCE);
+  const [showWoka, setShowWoka] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,14 +43,12 @@ export default function Dashboard() {
       .officialSpaces()
       .then((res) => setOfficial(res.spaces))
       .catch(() => {});
-    api
-      .avatars()
-      .then((res) => setAvatars(res.avatars))
-      .catch(() => {});
     if (session) {
       api
         .metadataBulk([session.userId])
-        .then((res) => setCurrentAvatarUrl(res.avatars[0]?.avatarId ?? null))
+        .then((res) =>
+          setAppearance(normalizeAppearance(res.avatars[0]?.wokaAppearance)),
+        )
         .catch(() => {});
     }
   }, [refreshSpaces, session]);
@@ -60,9 +66,9 @@ export default function Dashboard() {
     }
   }
 
-  async function pickAvatar(avatar: Avatar) {
-    await api.updateMetadata(avatar.id);
-    setCurrentAvatarUrl(avatar.imageUrl);
+  async function saveAppearance(next: WokaAppearance) {
+    setAppearance(next);
+    await api.updateWoka(next).catch(() => {});
   }
 
   async function removeSpace(space: SpaceSummary) {
@@ -258,31 +264,32 @@ export default function Dashboard() {
           <aside className="avatar-dock">
             <div className="avatar-dock-heading">
               <p className="eyebrow">PLAYER PROFILE</p>
-              <h2>Choose your avatar</h2>
+              <h2>Your avatar</h2>
               <p>Everyone in a room sees this character.</p>
             </div>
-            {avatars.length === 0 ? (
-              <p className="muted">No avatars available yet.</p>
-            ) : (
-              <div className="avatar-row">
-                {avatars.map((avatar) => (
-                  <button
-                    key={avatar.id}
-                    className={`avatar-choice${avatar.imageUrl === currentAvatarUrl ? " selected" : ""}`}
-                    onClick={() => pickAvatar(avatar)}
-                    aria-pressed={avatar.imageUrl === currentAvatarUrl}
-                  >
-                    {avatar.imageUrl && (
-                      <img src={avatar.imageUrl} alt="" className="pixel" />
-                    )}
-                    <span className="label">{avatar.name ?? "unnamed"}</span>
-                  </button>
-                ))}
+            <div className="woka-card">
+              <WokaPreview appearance={appearance} scale={3} animated />
+              <div className="woka-card-text">
+                <p className="muted">Layered, fully customizable.</p>
+                <button
+                  className="btn primary"
+                  onClick={() => setShowWoka(true)}
+                >
+                  Customize
+                </button>
               </div>
-            )}
+            </div>
           </aside>
         </div>
       </main>
+
+      {showWoka && (
+        <WokaCustomizer
+          initial={appearance}
+          onClose={() => setShowWoka(false)}
+          onSave={saveAppearance}
+        />
+      )}
 
       {showCreate && (
         <CreateRoomModal

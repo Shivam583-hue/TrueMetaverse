@@ -63,20 +63,28 @@ export function isBlocked(
   return collision.blocked[y * collision.cols + x] === 1;
 }
 
-export function randomSpawn(
+export function centerSpawn(
   collision: CollisionData | null,
   width: number,
   height: number,
 ): { x: number; y: number } {
-  if (collision && collision.walkable.length > 0) {
-    const pick =
-      collision.walkable[
-        Math.floor(Math.random() * collision.walkable.length)
-      ]!;
-    return { x: pick.x, y: pick.y };
+  const cols = collision?.cols ?? width;
+  const rows = collision?.rows ?? height;
+  const cx = Math.floor(cols / 2);
+  const cy = Math.floor(rows / 2);
+
+  if (!isBlocked(collision, cx, cy)) return { x: cx, y: cy };
+
+  const maxRing = Math.max(cols, rows);
+  for (let r = 1; r <= maxRing; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = cx + dx;
+        const y = cy + dy;
+        if (!isBlocked(collision, x, y)) return { x, y };
+      }
+    }
   }
-  return {
-    x: Math.floor(Math.random() * width),
-    y: Math.floor(Math.random() * height),
-  };
+  return { x: cx, y: cy };
 }

@@ -6,6 +6,7 @@ import { GridMovement, type Direction } from "../systems/GridMovement";
 import { CameraController } from "../systems/CameraController";
 import type { CollisionEditor } from "../systems/CollisionEditor";
 import { Player } from "../entities/Player";
+import type { WokaAppearance } from "../woka/wokaConfig";
 import {
   SPACE_FOREGROUND_TEXTURE,
   SPACE_TEXTURE,
@@ -100,8 +101,10 @@ export class SpaceScene extends Phaser.Scene {
     }
 
     EventBus.on(SpaceEvent.PlayerName, this.onPlayerName, this);
+    EventBus.on(SpaceEvent.PlayerAppearance, this.onPlayerAppearance, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       EventBus.off(SpaceEvent.PlayerName, this.onPlayerName, this);
+      EventBus.off(SpaceEvent.PlayerAppearance, this.onPlayerAppearance, this);
     });
     EventBus.emit(SpaceEvent.SceneReady);
   }
@@ -116,6 +119,10 @@ export class SpaceScene extends Phaser.Scene {
 
   private onPlayerName(name: string): void {
     this.player.setDisplayName(name);
+  }
+
+  private onPlayerAppearance(appearance: WokaAppearance): void {
+    this.player.setAppearance(appearance);
   }
 
   private readDirection(): Direction | null {

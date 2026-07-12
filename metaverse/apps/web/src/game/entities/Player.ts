@@ -73,7 +73,7 @@ export class Player extends Phaser.GameObjects.Container {
   }
 
   private layoutLabels(): void {
-    const top = -this.woka.displayHeight - 4;
+    const top = -this.woka.wokaHeight - 4;
     this.label.setY(top);
     this.timer?.setY(top - this.label.height - 1);
   }

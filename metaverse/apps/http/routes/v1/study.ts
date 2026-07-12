@@ -94,10 +94,15 @@ function periodStart(period: string): Date | null {
       start.setHours(0, 0, 0, 0);
       return start;
     }
-    case "weekly":
-      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    case "weekly": {
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      const mondayOffset = (start.getDay() + 6) % 7;
+      start.setDate(start.getDate() - mondayOffset);
+      return start;
+    }
     case "monthly":
-      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return new Date(now.getFullYear(), now.getMonth(), 1);
     default:
       return null;
   }

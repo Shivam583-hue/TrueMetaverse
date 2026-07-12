@@ -8,8 +8,13 @@ import { ArenaSocket } from "../lib/ws";
 import { createArenaGame } from "../game/main";
 import { MultiplayerSpaceScene } from "../game/scenes/MultiplayerSpaceScene";
 import SpaceControls from "../components/SpaceControls";
+import WokaPreview from "../components/WokaPreview";
+import {
+  normalizeAppearance,
+  type WokaAppearance,
+} from "../game/woka/wokaConfig";
 
-type UserMeta = { username: string | null; avatarUrl: string | null };
+type UserMeta = { username: string | null; appearance: WokaAppearance };
 
 export function formatDuration(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
@@ -64,15 +69,21 @@ export default function Arena() {
       );
       if (missing.length === 0) return;
       for (const id of missing)
-        metaRef.current.set(id, { username: null, avatarUrl: null });
+        metaRef.current.set(id, {
+          username: null,
+          appearance: normalizeAppearance(null),
+        });
       try {
         const res = await api.metadataBulk(missing);
         if (disposed) return;
         for (const m of res.avatars) {
-          const entry = { username: m.username, avatarUrl: m.avatarId ?? null };
+          const entry = {
+            username: m.username,
+            appearance: normalizeAppearance(m.wokaAppearance),
+          };
           metaRef.current.set(m.userId, entry);
           withScene((scene) =>
-            scene.setUserMeta(m.userId, entry.username, entry.avatarUrl),
+            scene.setUserMeta(m.userId, entry.username, entry.appearance),
           );
         }
         setMeta(Object.fromEntries(metaRef.current));
@@ -92,7 +103,7 @@ export default function Arena() {
             for (const u of payload.users)
               scene.addRemote(u.id, u.userId, u.x, u.y);
             for (const [userId, m] of metaRef.current) {
-              scene.setUserMeta(userId, m.username, m.avatarUrl);
+              scene.setUserMeta(userId, m.username, m.appearance);
             }
           });
         },
@@ -105,7 +116,7 @@ export default function Arena() {
             const m = metaRef.current.get(payload.userId);
             if (m)
               withScene((scene) =>
-                scene.setUserMeta(payload.userId, m.username, m.avatarUrl),
+                scene.setUserMeta(payload.userId, m.username, m.appearance),
               );
           });
         },
@@ -140,7 +151,6 @@ export default function Arena() {
       }
       if (disposed) return;
       setSpaceName(detail.name);
-      if (detail.official) setBoardOpen(true);
 
       const scene = new MultiplayerSpaceScene({
         onSceneReady: () => {
@@ -246,11 +256,11 @@ export default function Arena() {
             {status === "live" && (
               <li>
                 <span className="online-dot" />
-                {meta[session!.userId]?.avatarUrl && (
-                  <img
-                    src={meta[session!.userId]!.avatarUrl!}
-                    alt=""
-                    className="pixel"
+                {meta[session!.userId] && (
+                  <WokaPreview
+                    appearance={meta[session!.userId]!.appearance}
+                    scale={1}
+                    className="online-woka"
                   />
                 )}
                 {session?.username} (you)
@@ -259,11 +269,11 @@ export default function Arena() {
             {onlineEntries.map(([sid, userId]) => (
               <li key={sid}>
                 <span className="online-dot" />
-                {meta[userId]?.avatarUrl && (
-                  <img
-                    src={meta[userId]!.avatarUrl!}
-                    alt=""
-                    className="pixel"
+                {meta[userId] && (
+                  <WokaPreview
+                    appearance={meta[userId]!.appearance}
+                    scale={1}
+                    className="online-woka"
                   />
                 )}
                 {meta[userId]?.username ?? userId.slice(0, 8)}

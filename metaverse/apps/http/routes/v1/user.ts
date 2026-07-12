@@ -1,9 +1,26 @@
 import { Router } from "express";
-import { UpdateMetadataSchema } from "../../types";
+import { UpdateMetadataSchema, UpdateWokaSchema } from "../../types";
 import client from "@repo/db/client";
 import { userMiddleware } from "../../middleware/user";
 
 export const userRouter = Router();
+
+userRouter.post("/woka", userMiddleware, async (req, res) => {
+  const parsed = UpdateWokaSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: "Validation failed" });
+    return;
+  }
+  try {
+    await client.user.update({
+      where: { id: req.userId },
+      data: { wokaAppearance: parsed.data.appearance },
+    });
+    res.json({ message: "Appearance updated" });
+  } catch {
+    res.status(400).json({ message: "Internal server error" });
+  }
+});
 
 userRouter.post("/metadata", userMiddleware, async (req, res) => {
   const parsedData = UpdateMetadataSchema.safeParse(req.body);
@@ -42,6 +59,7 @@ userRouter.get("/metadata/bulk", async (req, res) => {
       avatar: true,
       id: true,
       username: true,
+      wokaAppearance: true,
     },
   });
 
@@ -50,6 +68,7 @@ userRouter.get("/metadata/bulk", async (req, res) => {
       userId: m.id,
       username: m.username,
       avatarId: m.avatar?.imageUrl,
+      wokaAppearance: m.wokaAppearance ?? null,
     })),
   });
 });

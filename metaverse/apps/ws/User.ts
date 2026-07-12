@@ -5,9 +5,9 @@ import client from "@repo/db/client";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { JWT_PASSWORD } from "./config";
 import {
+  centerSpawn,
   isBlocked,
   loadCollision,
-  randomSpawn,
   type CollisionData,
 } from "./collision";
 
@@ -67,7 +67,7 @@ export class User {
           this.spaceHeight = space.height;
           this.collision = loadCollision(space.mapImage);
           RoomManager.getInstance().addUser(spaceId, this);
-          const spawn = randomSpawn(this.collision, space.width, space.height);
+          const spawn = centerSpawn(this.collision, space.width, space.height);
           this.x = spawn.x;
           this.y = spawn.y;
           this.send({

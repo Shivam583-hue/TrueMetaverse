@@ -52,6 +52,7 @@ export type UserMetadata = {
   userId: string;
   username: string;
   avatarId?: string;
+  wokaAppearance?: Record<string, string> | null;
 };
 
 export type LeaderboardPeriod = "all" | "daily" | "weekly" | "monthly";
@@ -119,6 +120,11 @@ export const api = {
     request<{ message: string }>("/user/metadata", {
       method: "POST",
       body: JSON.stringify({ avatarId }),
+    }),
+  updateWoka: (appearance: Record<string, string>) =>
+    request<{ message: string }>("/user/woka", {
+      method: "POST",
+      body: JSON.stringify({ appearance }),
     }),
   metadataBulk: (userIds: string[]) =>
     request<{ avatars: UserMetadata[] }>(

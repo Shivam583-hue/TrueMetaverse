@@ -2,16 +2,23 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../lib/auth";
 import { api } from "../lib/api";
+import WokaPreview from "./WokaPreview";
+import {
+  normalizeAppearance,
+  type WokaAppearance,
+} from "../game/woka/wokaConfig";
 
 export default function TopBar() {
   const { session, signout } = useAuth();
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [appearance, setAppearance] = useState<WokaAppearance | null>(null);
 
   useEffect(() => {
     if (!session) return;
     api
       .metadataBulk([session.userId])
-      .then((res) => setAvatarUrl(res.avatars[0]?.avatarId ?? null))
+      .then((res) =>
+        setAppearance(normalizeAppearance(res.avatars[0]?.wokaAppearance)),
+      )
       .catch(() => {});
   }, [session]);
 
@@ -26,7 +33,9 @@ export default function TopBar() {
         <span className="topbar-location">lobby</span>
       </div>
       <div className="topbar-user">
-        {avatarUrl && <img src={avatarUrl} alt="" className="pixel" />}
+        {appearance && (
+          <WokaPreview appearance={appearance} scale={1} className="topbar-woka" />
+        )}
         <div className="topbar-identity">
           <span className="name">{session.username}</span>
           <span className="topbar-presence">

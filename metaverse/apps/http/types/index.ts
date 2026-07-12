@@ -15,6 +15,23 @@ export const UpdateMetadataSchema = z.object({
   avatarId: z.string(),
 });
 
+export const WOKA_LAYER_KEYS = [
+  "body",
+  "clothes",
+  "eyes",
+  "hair",
+  "hat",
+  "accessory",
+] as const;
+
+export const UpdateWokaSchema = z.object({
+  appearance: z.object(
+    Object.fromEntries(
+      WOKA_LAYER_KEYS.map((k) => [k, z.string().max(64)]),
+    ) as Record<(typeof WOKA_LAYER_KEYS)[number], z.ZodString>,
+  ),
+});
+
 export const CreateSpaceSchema = z.object({
   name: z.string().min(1).max(60),
   mapId: z.string(),
