@@ -46,6 +46,15 @@ export default function WokaCustomizer({
         className="card modal woka-modal"
         onClick={(e) => e.stopPropagation()}
       >
+
+        <div className="modal-actions">
+          <button className="btn ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button className="btn primary" onClick={handleSave} disabled={busy}>
+            {busy ? "Saving..." : "Save avatar"}
+          </button>
+        </div>
         <h2 style={{ fontSize: "0.95rem", color: "var(--coin)" }}>
           your avatar
         </h2>
@@ -103,14 +112,6 @@ export default function WokaCustomizer({
           </div>
         </div>
 
-        <div className="modal-actions">
-          <button className="btn ghost" onClick={onClose} disabled={busy}>
-            Cancel
-          </button>
-          <button className="btn primary" onClick={handleSave} disabled={busy}>
-            {busy ? "Saving..." : "Save avatar"}
-          </button>
-        </div>
       </div>
     </div>
   );
