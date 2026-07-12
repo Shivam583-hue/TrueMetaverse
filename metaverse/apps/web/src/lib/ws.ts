@@ -50,6 +50,10 @@ export class ArenaSocket {
     this.send({ type: "move", payload: { x, y } });
   }
 
+  chat(text: string) {
+    this.send({ type: "chat", payload: { text } });
+  }
+
   close() {
     this.ws.onclose = null;
     this.ws.close();

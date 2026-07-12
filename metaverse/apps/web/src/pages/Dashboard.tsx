@@ -268,7 +268,9 @@ export default function Dashboard() {
               <p>Everyone in a room sees this character.</p>
             </div>
             <div className="woka-card">
-              <WokaPreview appearance={appearance} scale={3} animated />
+              <div className="woka-portrait">
+                <WokaPreview appearance={appearance} scale={3} animated />
+              </div>
               <div className="woka-card-text">
                 <p className="muted">Layered, fully customizable.</p>
                 <button

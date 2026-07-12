@@ -5,9 +5,17 @@ export type SpaceUser = {
   y: number;
 };
 
+export type ChatMessage = {
+  id: string;
+  userId: string;
+  text: string;
+  at: number;
+};
+
 export type IncomingMessage =
   | { type: "join"; payload: { spaceId: string; token: string } }
-  | { type: "move"; payload: { x: number; y: number } };
+  | { type: "move"; payload: { x: number; y: number } }
+  | { type: "chat"; payload: { text: string } };
 
 export type OutgoingMessage =
   | {
@@ -20,4 +28,5 @@ export type OutgoingMessage =
   | { type: "user-joined"; payload: SpaceUser }
   | { type: "movement"; payload: SpaceUser }
   | { type: "movement-rejected"; payload: { x: number; y: number } }
-  | { type: "user-left"; payload: { id: string; userId: string } };
+  | { type: "user-left"; payload: { id: string; userId: string } }
+  | { type: "chat"; payload: ChatMessage };

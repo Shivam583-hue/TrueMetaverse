@@ -16,6 +16,14 @@ import {
 
 type UserMeta = { username: string | null; appearance: WokaAppearance };
 
+type ChatEntry = {
+  key: number;
+  kind: "user" | "system";
+  userId: string;
+  text: string;
+  at: number;
+};
+
 export function formatDuration(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
@@ -46,6 +54,13 @@ export default function Arena() {
   startedAtRef.current = startedAt;
 
   const [boardOpen, setBoardOpen] = useState(false);
+
+  const [messages, setMessages] = useState<ChatEntry[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatOpen, setChatOpen] = useState(true);
+  const chatKeyRef = useRef(0);
+  const chatLogRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!spaceId || !session || !canvasRef.current) return;
@@ -89,6 +104,13 @@ export default function Arena() {
         setMeta(Object.fromEntries(metaRef.current));
       } catch {}
     }
+
+    const pushMessage = (entry: Omit<ChatEntry, "key">) => {
+      setMessages((prev) => {
+        const next = [...prev, { ...entry, key: chatKeyRef.current++ }];
+        return next.length > 200 ? next.slice(-200) : next;
+      });
+    };
 
     const socket = new ArenaSocket(
       {

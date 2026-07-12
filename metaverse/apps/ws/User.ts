@@ -11,6 +11,10 @@ import {
   type CollisionData,
 } from "./collision";
 
+const MAX_CHAT_LENGTH = 500;
+const CHAT_WINDOW_MS = 10_000;
+const CHAT_MAX_IN_WINDOW = 10;
+
 function getRandomString(length: number) {
   const characters =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -31,6 +35,7 @@ export class User {
   public x: number;
   public y: number;
   private ws: WebSocket;
+  private chatTimestamps: number[] = [];
 
   constructor(ws: WebSocket) {
     this.id = getRandomString(10);
@@ -144,6 +149,33 @@ export class User {
               y: this.y,
             },
           });
+          break;
+        case "chat": {
+          if (!this.userId || !this.spaceId) return;
+          const text = parsedData.payload.text.trim().slice(0, MAX_CHAT_LENGTH);
+          if (!text) return;
+
+          const now = Date.now();
+          this.chatTimestamps = this.chatTimestamps.filter(
+            (t) => now - t < CHAT_WINDOW_MS,
+          );
+          if (this.chatTimestamps.length >= CHAT_MAX_IN_WINDOW) return;
+          this.chatTimestamps.push(now);
+
+          RoomManager.getInstance().broadcastAll(
+            {
+              type: "chat",
+              payload: {
+                id: this.id,
+                userId: this.userId,
+                text,
+                at: now,
+              },
+            },
+            this.spaceId,
+          );
+          break;
+        }
       }
     });
   }

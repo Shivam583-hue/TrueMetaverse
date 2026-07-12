@@ -447,26 +447,47 @@ textarea:focus-visible {
 .woka-card {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.1rem;
   background: var(--dusk);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  padding: 1rem;
   max-width: 420px;
 }
 
-.woka-card canvas {
-  background: var(--midnight);
-  border-radius: 8px;
-  padding: 4px;
+.woka-portrait {
+  flex: none;
+  display: grid;
+  place-items: end center;
+  width: 104px;
+  height: 116px;
+  padding-bottom: 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(
+      ellipse 60% 22% at 50% 88%,
+      #ffffff12,
+      transparent 70%
+    ),
+    var(--midnight);
+}
+
+.woka-portrait canvas {
+  image-rendering: pixelated;
 }
 
 .woka-card .woka-card-text {
   flex: 1;
+  min-width: 0;
 }
 
 .woka-card .woka-card-text .muted {
-  margin: 0.2rem 0 0.6rem;
+  margin: 0 0 0.7rem;
+}
+
+.woka-card .woka-card-text .btn {
+  width: 100%;
 }
 
 .woka-modal {
@@ -1386,7 +1407,7 @@ textarea:focus-visible {
 
 .lobby-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 250px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: clamp(32px, 5vw, 68px);
   align-items: start;
   margin-top: 42px;

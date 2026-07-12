@@ -117,6 +117,16 @@ export class SpaceScene extends Phaser.Scene {
 
   protected onLocalStep(): void {}
 
+  setKeyboardEnabled(enabled: boolean): void {
+    const keyboard = this.input?.keyboard;
+    if (!keyboard) return;
+    keyboard.enabled = enabled;
+    if (!enabled) {
+      keyboard.resetKeys();
+      this.movement.update(null);
+    }
+  }
+
   private onPlayerName(name: string): void {
     this.player.setDisplayName(name);
   }
