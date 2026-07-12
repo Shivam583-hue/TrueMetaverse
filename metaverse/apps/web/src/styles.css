@@ -775,6 +775,131 @@ textarea:focus-visible {
   flex: none;
 }
 
+.hud.bottom-left {
+  bottom: 0.9rem;
+  left: 0.9rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.chat {
+  width: 320px;
+  max-width: calc(100vw - 1.8rem);
+}
+
+.chat-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  align-self: flex-start;
+  gap: 0.7rem;
+  min-width: 130px;
+  background: #14162bd9;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0.6rem 1rem;
+  color: var(--moonlight);
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.chat-toggle:hover {
+  border-color: var(--portal);
+  background: var(--dusk);
+}
+
+.chat-toggle-label {
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
+  color: var(--portal);
+}
+
+.chat-toggle-caret {
+  font-size: 0.85rem;
+  color: var(--fog);
+}
+
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  height: 240px;
+  overflow-y: auto;
+  padding: 0.6rem 0.7rem;
+  background: #14162be6;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  overscroll-behavior: contain;
+}
+
+.chat-empty {
+  margin: auto 0;
+  color: var(--fog);
+  font-size: 0.8rem;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.chat-msg {
+  font-size: 0.84rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.chat-msg.system {
+  color: var(--fog);
+  font-style: italic;
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.chat-author {
+  font-weight: 600;
+  color: var(--coin);
+  margin-right: 0.35rem;
+}
+
+.chat-author.me {
+  color: var(--portal);
+}
+
+.chat-text {
+  color: var(--moonlight);
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.chat-input {
+  flex: 1;
+  min-width: 0;
+  background: #14162bd9;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  color: var(--moonlight);
+  font-size: 0.85rem;
+  backdrop-filter: blur(4px);
+}
+
+.chat-input:focus-visible {
+  outline: none;
+  border-color: var(--portal);
+}
+
+.chat-send {
+  flex: none;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8rem;
+}
+
 .space-canvas {
   position: absolute;
   inset: 0;

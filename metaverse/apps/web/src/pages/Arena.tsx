@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import type Phaser from "phaser";
 import { api } from "../lib/api";
@@ -57,7 +58,7 @@ export default function Arena() {
 
   const [messages, setMessages] = useState<ChatEntry[]>([]);
   const [chatInput, setChatInput] = useState("");
-  const [chatOpen, setChatOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
   const chatKeyRef = useRef(0);
   const chatLogRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
@@ -112,6 +113,9 @@ export default function Arena() {
       });
     };
 
+    const nameOf = (userId: string) =>
+      metaRef.current.get(userId)?.username ?? userId.slice(0, 8);
+
     const socket = new ArenaSocket(
       {
         "space-joined": (payload) => {
@@ -140,6 +144,12 @@ export default function Arena() {
               withScene((scene) =>
                 scene.setUserMeta(payload.userId, m.username, m.appearance),
               );
+            pushMessage({
+              kind: "system",
+              userId: payload.userId,
+              text: `${nameOf(payload.userId)} joined`,
+              at: Date.now(),
+            });
           });
         },
         movement: (payload) =>
@@ -150,10 +160,24 @@ export default function Arena() {
           withScene((scene) => scene.rollbackLocal(payload.x, payload.y)),
         "user-left": (payload) => {
           withScene((scene) => scene.removeRemote(payload.id));
+          pushMessage({
+            kind: "system",
+            userId: payload.userId,
+            text: `${nameOf(payload.userId)} left`,
+            at: Date.now(),
+          });
           setOnline((prev) => {
             const next = { ...prev };
             delete next[payload.id];
             return next;
+          });
+        },
+        chat: (payload) => {
+          pushMessage({
+            kind: "user",
+            userId: payload.userId,
+            text: payload.text,
+            at: payload.at,
           });
         },
       },
@@ -247,6 +271,30 @@ export default function Arena() {
     }
   }, [startedAt, spaceId]);
 
+  useEffect(() => {
+    if (!chatOpen) return;
+    const log = chatLogRef.current;
+    if (log) log.scrollTop = log.scrollHeight;
+  }, [messages, chatOpen]);
+
+  // While the chat is open the game keyboard is disabled, so the avatar stays
+  // put and every key (including space and WASD) types into the message box.
+  useEffect(() => {
+    sceneRef.current?.setKeyboardEnabled(!chatOpen);
+    if (chatOpen) chatInputRef.current?.focus();
+  }, [chatOpen]);
+
+  const sendChat = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault();
+      const text = chatInput.trim();
+      if (!text) return;
+      socketRef.current?.chat(text);
+      setChatInput("");
+    },
+    [chatInput],
+  );
+
   const onlineEntries = Object.entries(online);
 
   return (
@@ -324,6 +372,65 @@ export default function Arena() {
           </span>
         ) : (
           <span className="hud-chip mono">arrow keys / wasd to move</span>
+        )}
+      </div>
+
+      <div className={`hud bottom-left chat${chatOpen ? " open" : ""}`}>
+        <button
+          className="chat-toggle"
+          onClick={() => setChatOpen((v) => !v)}
+          title={chatOpen ? "Hide chat" : "Show chat"}
+        >
+          <span className="chat-toggle-label">chat</span>
+          <span className="chat-toggle-caret">{chatOpen ? "▾" : "▴"}</span>
+        </button>
+        {chatOpen && (
+          <>
+            <div className="chat-log" ref={chatLogRef}>
+              {messages.length === 0 ? (
+                <div className="chat-empty">
+                  Say hi to the room. Messages are visible to everyone here.
+                </div>
+              ) : (
+                messages.map((m) =>
+                  m.kind === "system" ? (
+                    <div key={m.key} className="chat-msg system">
+                      {m.text}
+                    </div>
+                  ) : (
+                    <div key={m.key} className="chat-msg">
+                      <span
+                        className={`chat-author${m.userId === session!.userId ? " me" : ""}`}
+                      >
+                        {m.userId === session!.userId
+                          ? "you"
+                          : (meta[m.userId]?.username ?? m.userId.slice(0, 8))}
+                      </span>
+                      <span className="chat-text">{m.text}</span>
+                    </div>
+                  ),
+                )
+              )}
+            </div>
+            <form className="chat-input-row" onSubmit={sendChat}>
+              <input
+                ref={chatInputRef}
+                className="chat-input"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                maxLength={500}
+                placeholder="Message the room..."
+                disabled={status !== "live"}
+              />
+              <button
+                type="submit"
+                className="btn primary chat-send"
+                disabled={status !== "live" || chatInput.trim().length === 0}
+              >
+                Send
+              </button>
+            </form>
+          </>
         )}
       </div>
 

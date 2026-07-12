@@ -152,6 +152,7 @@ export class User {
           break;
         case "chat": {
           if (!this.userId || !this.spaceId) return;
+          if (typeof parsedData.payload.text !== "string") return;
           const text = parsedData.payload.text.trim().slice(0, MAX_CHAT_LENGTH);
           if (!text) return;
 
