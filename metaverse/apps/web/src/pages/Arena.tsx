@@ -277,8 +277,6 @@ export default function Arena() {
     if (log) log.scrollTop = log.scrollHeight;
   }, [messages, chatOpen]);
 
-  // While the chat is open the game keyboard is disabled, so the avatar stays
-  // put and every key (including space and WASD) types into the message box.
   useEffect(() => {
     sceneRef.current?.setKeyboardEnabled(!chatOpen);
     if (chatOpen) chatInputRef.current?.focus();

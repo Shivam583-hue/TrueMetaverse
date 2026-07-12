@@ -465,11 +465,7 @@ textarea:focus-visible {
   border-radius: 10px;
   border: 1px solid var(--line);
   background:
-    radial-gradient(
-      ellipse 60% 22% at 50% 88%,
-      #ffffff12,
-      transparent 70%
-    ),
+    radial-gradient(ellipse 60% 22% at 50% 88%, #ffffff12, transparent 70%),
     var(--midnight);
 }
 
@@ -569,8 +565,8 @@ textarea:focus-visible {
   height: 48px;
   overflow: hidden;
   border-radius: 8px;
-  background:
-    repeating-conic-gradient(#20233f 0% 25%, #191b30 0% 50%) 50% / 12px 12px;
+  background: repeating-conic-gradient(#20233f 0% 25%, #191b30 0% 50%) 50% /
+    12px 12px;
 }
 
 .woka-chip canvas {
@@ -1062,7 +1058,6 @@ textarea:focus-visible {
   }
 }
 
-/* Auth portal and lobby */
 .btn {
   transition:
     transform 160ms cubic-bezier(0.23, 1, 0.32, 1),

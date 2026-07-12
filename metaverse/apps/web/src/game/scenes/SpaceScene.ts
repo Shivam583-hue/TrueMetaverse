@@ -17,7 +17,6 @@ const DEPTH_SPACE = 0;
 const DEPTH_PLAYER = 10;
 const DEPTH_FOREGROUND = 20;
 
-// Keys Phaser captures (preventDefault) for movement; released while chat is open.
 const MOVEMENT_KEYS = "W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,SHIFT";
 
 export class SpaceScene extends Phaser.Scene {
@@ -125,11 +124,8 @@ export class SpaceScene extends Phaser.Scene {
     if (!keyboard) return;
     keyboard.enabled = enabled;
     if (enabled) {
-      // Re-arm the preventDefault captures Phaser registers for movement keys.
       keyboard.addCapture(MOVEMENT_KEYS);
     } else {
-      // Release the captures so SPACE / WASD / arrows reach the chat input
-      // instead of being swallowed by the game, and stop any in-flight move.
       keyboard.resetKeys();
       keyboard.removeCapture(MOVEMENT_KEYS);
       this.movement.update(null);
