@@ -19,12 +19,20 @@ export default function TopBar() {
 
   return (
     <header className="topbar">
-      <Link to="/" className="wordmark">
-        true<span>metaverse</span>
-      </Link>
+      <div className="topbar-brand">
+        <Link to="/" className="wordmark">
+          true<span>metaverse</span>
+        </Link>
+        <span className="topbar-location">lobby</span>
+      </div>
       <div className="topbar-user">
         {avatarUrl && <img src={avatarUrl} alt="" className="pixel" />}
-        <span className="name">{session.username}</span>
+        <div className="topbar-identity">
+          <span className="name">{session.username}</span>
+          <span className="topbar-presence">
+            <i /> online
+          </span>
+        </div>
         <button className="btn ghost" onClick={signout}>
           Sign out
         </button>

@@ -4,9 +4,16 @@ import type { IncomingMessage, OutgoingMessage } from "@repo/types";
 import client from "@repo/db/client";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { JWT_PASSWORD } from "./config";
+import {
+  isBlocked,
+  loadCollision,
+  randomSpawn,
+  type CollisionData,
+} from "./collision";
 
 function getRandomString(length: number) {
-  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let result = "";
   for (let i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
@@ -20,6 +27,7 @@ export class User {
   private spaceId?: string;
   private spaceWidth = 0;
   private spaceHeight = 0;
+  private collision: CollisionData | null = null;
   public x: number;
   public y: number;
   private ws: WebSocket;
@@ -29,7 +37,7 @@ export class User {
     this.x = 0;
     this.y = 0;
     this.ws = ws;
-    this.initHandlers()
+    this.initHandlers();
   }
 
   initHandlers() {
@@ -39,46 +47,61 @@ export class User {
         case "join":
           const spaceId = parsedData.payload.spaceId;
           const token = parsedData.payload.token;
-          const userId = (jwt.verify(token, JWT_PASSWORD) as JwtPayload).userId
+          const userId = (jwt.verify(token, JWT_PASSWORD) as JwtPayload).userId;
           if (!userId) {
-            this.ws.close()
-            return
-          }
-          this.userId = userId
-          const space = await client.space.findFirst({
-            where: {
-              id: spaceId
-            }
-          })
-          if (!space) {
-            this.ws.close()
+            this.ws.close();
             return;
           }
-          this.spaceId = spaceId
+          this.userId = userId;
+          const space = await client.space.findFirst({
+            where: {
+              id: spaceId,
+            },
+          });
+          if (!space) {
+            this.ws.close();
+            return;
+          }
+          this.spaceId = spaceId;
           this.spaceWidth = space.width;
           this.spaceHeight = space.height;
+          this.collision = loadCollision(space.mapImage);
           RoomManager.getInstance().addUser(spaceId, this);
-          this.x = Math.floor(Math.random() * space?.width);
-          this.y = Math.floor(Math.random() * space?.height);
+          const spawn = randomSpawn(this.collision, space.width, space.height);
+          this.x = spawn.x;
+          this.y = spawn.y;
           this.send({
             type: "space-joined",
             payload: {
               spawn: {
                 x: this.x,
-                y: this.y
+                y: this.y,
               },
-              users: RoomManager.getInstance().rooms.get(spaceId)?.filter(x => x.id !== this.id)?.map((u) => ({ id: u.id, userId: u.userId!, x: u.x, y: u.y })) ?? []
-            }
+              users:
+                RoomManager.getInstance()
+                  .rooms.get(spaceId)
+                  ?.filter((x) => x.id !== this.id)
+                  ?.map((u) => ({
+                    id: u.id,
+                    userId: u.userId!,
+                    x: u.x,
+                    y: u.y,
+                  })) ?? [],
+            },
           });
-          RoomManager.getInstance().broadcast({
-            type: "user-joined",
-            payload: {
-              id: this.id,
-              userId: this.userId!,
-              x: this.x,
-              y: this.y
-            }
-          }, this, this.spaceId!);
+          RoomManager.getInstance().broadcast(
+            {
+              type: "user-joined",
+              payload: {
+                id: this.id,
+                userId: this.userId!,
+                x: this.x,
+                y: this.y,
+              },
+            },
+            this,
+            this.spaceId!,
+          );
           break;
         case "move":
           const moveX = parsedData.payload.x;
@@ -86,20 +109,31 @@ export class User {
           const xDisplacement = Math.abs(this.x - moveX);
           const yDisplacement = Math.abs(this.y - moveY);
           const insideBounds =
-            moveX >= 0 && moveX < this.spaceWidth &&
-            moveY >= 0 && moveY < this.spaceHeight;
-          if (insideBounds && ((xDisplacement == 1 && yDisplacement == 0) || (xDisplacement == 0 && yDisplacement == 1))) {
+            moveX >= 0 &&
+            moveX < this.spaceWidth &&
+            moveY >= 0 &&
+            moveY < this.spaceHeight;
+          if (
+            insideBounds &&
+            ((xDisplacement == 1 && yDisplacement == 0) ||
+              (xDisplacement == 0 && yDisplacement == 1)) &&
+            !isBlocked(this.collision, moveX, moveY)
+          ) {
             this.x = moveX;
             this.y = moveY;
-            RoomManager.getInstance().broadcast({
-              type: "movement",
-              payload: {
-                id: this.id,
-                userId: this.userId!,
-                x: this.x,
-                y: this.y
-              }
-            }, this, this.spaceId!);
+            RoomManager.getInstance().broadcast(
+              {
+                type: "movement",
+                payload: {
+                  id: this.id,
+                  userId: this.userId!,
+                  x: this.x,
+                  y: this.y,
+                },
+              },
+              this,
+              this.spaceId!,
+            );
             return;
           }
 
@@ -107,22 +141,25 @@ export class User {
             type: "movement-rejected",
             payload: {
               x: this.x,
-              y: this.y
-            }
+              y: this.y,
+            },
           });
-
       }
     });
   }
 
   destroy() {
-    RoomManager.getInstance().broadcast({
-      type: "user-left",
-      payload: {
-        id: this.id,
-        userId: this.userId!
-      }
-    }, this, this.spaceId!);
+    RoomManager.getInstance().broadcast(
+      {
+        type: "user-left",
+        payload: {
+          id: this.id,
+          userId: this.userId!,
+        },
+      },
+      this,
+      this.spaceId!,
+    );
     RoomManager.getInstance().removeUser(this, this.spaceId!);
   }
 

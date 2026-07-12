@@ -5,8 +5,8 @@ import { useAuth } from "./lib/auth";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 
-// Arena pulls in Phaser (~1.4MB); keep it out of the main chunk
 const Arena = lazy(() => import("./pages/Arena"));
+const StudyDemo = lazy(() => import("./pages/StudyDemo"));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { session } = useAuth();
@@ -43,6 +43,14 @@ export default function App() {
               <Arena />
             </Suspense>
           </RequireAuth>
+        }
+      />
+      <Route
+        path="/study-demo"
+        element={
+          <Suspense fallback={<div className="arena-wrap" />}>
+            <StudyDemo />
+          </Suspense>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

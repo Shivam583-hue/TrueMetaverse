@@ -1,4 +1,10 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 import { api } from "./api";
 
@@ -12,7 +18,11 @@ type Session = {
 type AuthContextValue = {
   session: Session | null;
   signin: (username: string, password: string) => Promise<void>;
-  signup: (username: string, password: string, type: "user" | "admin") => Promise<void>;
+  signup: (
+    username: string,
+    password: string,
+    type: "user" | "admin",
+  ) => Promise<void>;
   signout: () => void;
 };
 

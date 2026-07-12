@@ -29,84 +29,132 @@ export default function Auth({ mode }: { mode: "signin" | "signup" }) {
       }
       navigate("/");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong. Try again.");
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Something went wrong. Try again.",
+      );
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="auth-wrap">
-      <div>
-        <div className="auth-hero">
-          <span className="wordmark">
-            true<span>metaverse</span>
-          </span>
-          <p>walk in, start the timer, study together</p>
-          <div className="auth-sprites">
-            {SPRITES.map((src) => (
-              <img key={src} src={src} alt="" className="pixel" />
-            ))}
+    <main className="auth-page">
+      <section className="auth-frame">
+        <div className="auth-world" aria-hidden="true">
+          <div className="auth-world-topline">
+            <span>TRUEMETAVERSE</span>
+            <span>LOBBY ACCESS</span>
           </div>
+          <div className="auth-world-copy">
+            <span className="auth-kicker">STUDY TOGETHER</span>
+            <h1>Find your focus in a world with people around.</h1>
+            <p>
+              Drop into shared spaces, make a quiet corner your own, and stay on
+              task together.
+            </p>
+          </div>
+          <div className="auth-scene">
+            <div className="auth-scene-floor" />
+            <div className="auth-scene-sign">STUDY LOUNGE</div>
+            <div className="auth-sprites">
+              {SPRITES.map((src, index) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt=""
+                  className={`pixel sprite sprite-${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+          <p className="auth-world-status">
+            <span /> Shared rooms are open around the clock
+          </p>
         </div>
 
-        <form className="card auth-card" onSubmit={handleSubmit}>
-          <h2 style={{ fontSize: "0.95rem" }}>{isSignup ? "create account" : "sign in"}</h2>
+        <div className="auth-form-side">
+          <Link className="auth-wordmark wordmark" to="/">
+            true<span>metaverse</span>
+          </Link>
 
-          <label className="field">
-            <span className="label">Username</span>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              required
-            />
-          </label>
+          <form className="auth-card" onSubmit={handleSubmit}>
+            <div className="auth-form-heading">
+              <span className="auth-kicker">
+                {isSignup ? "NEW EXPLORER" : "WELCOME BACK"}
+              </span>
+              <h2>{isSignup ? "Create your account" : "Enter the lobby"}</h2>
+              <p>
+                {isSignup
+                  ? "Set up your player profile to join shared study spaces."
+                  : "Sign in to pick up where your study session left off."}
+              </p>
+            </div>
 
-          <label className="field">
-            <span className="label">Password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={isSignup ? "new-password" : "current-password"}
-              required
-            />
-          </label>
-
-          {isSignup && (
-            <label className="check">
+            <label className="field">
+              <span className="label">Username</span>
               <input
-                type="checkbox"
-                checked={asAdmin}
-                onChange={(e) => setAsAdmin(e.target.checked)}
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                placeholder="Your player name"
+                required
               />
-              Admin account (can manage elements, avatars, and maps)
             </label>
-          )}
 
-          {error && <p className="error">{error}</p>}
+            <label className="field">
+              <span className="label">Password</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={isSignup ? "new-password" : "current-password"}
+                placeholder={isSignup ? "Choose a password" : "Your password"}
+                required
+              />
+            </label>
 
-          <div style={{ marginTop: "1.1rem" }}>
-            <button className="btn primary" style={{ width: "100%" }} disabled={busy}>
-              {busy ? "..." : isSignup ? "Create account" : "Sign in"}
-            </button>
-          </div>
-
-          <p className="swap">
-            {isSignup ? (
-              <>
-                Already have an account? <Link to="/signin">Sign in</Link>
-              </>
-            ) : (
-              <>
-                New here? <Link to="/signup">Create an account</Link>
-              </>
+            {isSignup && (
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={asAdmin}
+                  onChange={(e) => setAsAdmin(e.target.checked)}
+                />
+                <span>Give this account admin controls</span>
+              </label>
             )}
-          </p>
-        </form>
-      </div>
-    </div>
+
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+
+            <button className="btn primary auth-submit" disabled={busy}>
+              {busy
+                ? "Opening lobby..."
+                : isSignup
+                  ? "Create account"
+                  : "Sign in"}
+            </button>
+
+            <p className="swap">
+              {isSignup ? (
+                <>
+                  Already have an account? <Link to="/signin">Sign in</Link>
+                </>
+              ) : (
+                <>
+                  New here? <Link to="/signup">Create an account</Link>
+                </>
+              )}
+            </p>
+          </form>
+        </div>
+      </section>
+    </main>
   );
 }

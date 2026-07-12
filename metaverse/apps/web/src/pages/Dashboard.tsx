@@ -18,18 +18,27 @@ export default function Dashboard() {
 
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const refreshSpaces = useCallback(() => {
     api
       .mySpaces()
       .then((res) => setSpaces(res.spaces))
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load rooms"));
+      .catch((e) =>
+        setError(e instanceof ApiError ? e.message : "Could not load rooms"),
+      );
   }, []);
 
   useEffect(() => {
     refreshSpaces();
-    api.officialSpaces().then((res) => setOfficial(res.spaces)).catch(() => {});
-    api.avatars().then((res) => setAvatars(res.avatars)).catch(() => {});
+    api
+      .officialSpaces()
+      .then((res) => setOfficial(res.spaces))
+      .catch(() => {});
+    api
+      .avatars()
+      .then((res) => setAvatars(res.avatars))
+      .catch(() => {});
     if (session) {
       api
         .metadataBulk([session.userId])
@@ -45,7 +54,9 @@ export default function Dashboard() {
       const res = await api.spaceByCode(joinCode);
       navigate(`/space/${res.spaceId}`);
     } catch (err) {
-      setJoinError(err instanceof ApiError ? err.message : "Could not find that room");
+      setJoinError(
+        err instanceof ApiError ? err.message : "Could not find that room",
+      );
     }
   }
 
@@ -55,130 +66,222 @@ export default function Dashboard() {
   }
 
   async function removeSpace(space: SpaceSummary) {
-    if (!confirm(`Delete "${space.name}"? Everyone loses access to it.`)) return;
+    if (!confirm(`Delete "${space.name}"? Everyone loses access to it.`))
+      return;
     await api.deleteSpace(space.id);
     refreshSpaces();
+  }
+
+  async function copyRoomCode(code: string) {
+    try {
+      await navigator.clipboard?.writeText(code);
+      setCopiedCode(code);
+      window.setTimeout(() => setCopiedCode(null), 1600);
+    } catch {
+      setCopiedCode(null);
+    }
   }
 
   return (
     <>
       <TopBar />
-      <main className="page">
-        <section>
-          <p className="eyebrow">official rooms</p>
-          <div className="space-grid">
-            {official.map((space) => (
-              <div
-                key={space.id}
-                className="space-card official"
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate(`/space/${space.id}`)}
-                onKeyDown={(e) => e.key === "Enter" && navigate(`/space/${space.id}`)}
-              >
-                <div className="thumb">
-                  {space.thumbnail && <img src={space.thumbnail} alt="" />}
-                </div>
-                <div className="meta">
-                  <span className="name">{space.name}</span>
-                  <span className="dims">always open</span>
-                </div>
-              </div>
-            ))}
+      <main className="lobby">
+        <section className="lobby-intro">
+          <div>
+            <p className="eyebrow">YOUR STUDY LOBBY</p>
+            <h1>Welcome back, {session?.username ?? "explorer"}.</h1>
+            <p className="lobby-lede">
+              Choose a shared space, meet your crew, and make this session
+              count.
+            </p>
           </div>
-        </section>
 
-        <section className="section">
-          <p className="eyebrow">join with a code</p>
-          <form className="join-row" onSubmit={joinByCode}>
-            <input
-              type="text"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="e.g. QK7M2X"
-              maxLength={8}
-              aria-label="Room code"
-            />
-            <button className="btn primary" disabled={joinCode.trim().length < 4}>
-              Join room
-            </button>
+          <form className="join-panel" onSubmit={joinByCode}>
+            <div className="join-panel-heading">
+              <span className="join-panel-icon" aria-hidden="true">
+                #
+              </span>
+              <div>
+                <p className="eyebrow">QUICK JOIN</p>
+                <h2>Enter a room code</h2>
+              </div>
+            </div>
+            <div className="join-row">
+              <input
+                type="text"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="QK7M2X"
+                maxLength={8}
+                aria-label="Room code"
+              />
+              <button
+                className="btn primary"
+                disabled={joinCode.trim().length < 4}
+              >
+                Join
+              </button>
+            </div>
+            {joinError && (
+              <p className="error" role="alert">
+                {joinError}
+              </p>
+            )}
           </form>
-          {joinError && <p className="error">{joinError}</p>}
         </section>
 
-        <section className="section">
-          <p className="eyebrow">your rooms</p>
-          {error && <p className="error">{error}</p>}
-          {spaces && spaces.length === 0 && (
-            <div className="empty">
-              No rooms yet. Create one and share its code with your study group.
-            </div>
-          )}
-          <div className="space-grid">
-            {(spaces ?? []).map((space) => (
-              <div
-                key={space.id}
-                className="space-card"
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate(`/space/${space.id}`)}
-                onKeyDown={(e) => e.key === "Enter" && navigate(`/space/${space.id}`)}
-              >
-                <div className="thumb">
-                  {space.thumbnail && <img src={space.thumbnail} alt="" />}
+        <div className="lobby-layout">
+          <div className="lobby-spaces">
+            <section className="lobby-section">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">OPEN SPACES</p>
+                  <h2>Start somewhere lively</h2>
                 </div>
-                <div className="meta">
-                  <span className="name">{space.name}</span>
-                  <button
-                    className="code-chip"
-                    title="Copy room code"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard?.writeText(space.code);
-                    }}
-                  >
-                    {space.code}
-                  </button>
-                </div>
-                <div style={{ padding: "0 0.9rem 0.75rem" }}>
-                  <button
-                    className="btn danger"
-                    style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeSpace(space);
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
+                <span className="section-count">
+                  {official.length} available
+                </span>
               </div>
-            ))}
-            <button className="space-card new" onClick={() => setShowCreate(true)}>
-              + New room
-            </button>
-          </div>
-        </section>
+              {official.length === 0 ? (
+                <div className="empty compact">
+                  No official rooms are open right now.
+                </div>
+              ) : (
+                <div className="space-grid official-grid">
+                  {official.map((space) => (
+                    <div
+                      key={space.id}
+                      className="space-card official"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`/space/${space.id}`)}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && navigate(`/space/${space.id}`)
+                      }
+                    >
+                      <div className="thumb">
+                        {space.thumbnail && (
+                          <img src={space.thumbnail} alt="" />
+                        )}
+                      </div>
+                      <div className="meta">
+                        <span className="name">{space.name}</span>
+                        <span className="room-status">
+                          <i /> open now
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
 
-        <section className="section">
-          <p className="eyebrow">your avatar</p>
-          {avatars.length === 0 ? (
-            <p className="muted">No avatars available yet.</p>
-          ) : (
-            <div className="avatar-row">
-              {avatars.map((avatar) => (
+            <section className="lobby-section your-rooms-section">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">YOUR SPACES</p>
+                  <h2>Rooms you host</h2>
+                </div>
                 <button
-                  key={avatar.id}
-                  className={`avatar-choice${avatar.imageUrl === currentAvatarUrl ? " selected" : ""}`}
-                  onClick={() => pickAvatar(avatar)}
+                  className="btn primary create-room-btn"
+                  onClick={() => setShowCreate(true)}
                 >
-                  {avatar.imageUrl && <img src={avatar.imageUrl} alt="" className="pixel" />}
-                  <span className="label">{avatar.name ?? "unnamed"}</span>
+                  New room
                 </button>
-              ))}
+              </div>
+              {error && (
+                <p className="error" role="alert">
+                  {error}
+                </p>
+              )}
+              {spaces === null && (
+                <div className="empty compact">Loading your rooms...</div>
+              )}
+              {spaces && spaces.length === 0 && (
+                <div className="empty compact">
+                  No rooms yet. Create one for your next study crew.
+                </div>
+              )}
+              {spaces && spaces.length > 0 && (
+                <div className="space-grid">
+                  {(spaces ?? []).map((space) => (
+                    <div
+                      key={space.id}
+                      className="space-card"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`/space/${space.id}`)}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && navigate(`/space/${space.id}`)
+                      }
+                    >
+                      <div className="thumb">
+                        {space.thumbnail && (
+                          <img src={space.thumbnail} alt="" />
+                        )}
+                      </div>
+                      <div className="meta">
+                        <span className="name">{space.name}</span>
+                        <button
+                          className="code-chip"
+                          title={
+                            copiedCode === space.code
+                              ? "Copied"
+                              : "Copy room code"
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyRoomCode(space.code);
+                          }}
+                        >
+                          {copiedCode === space.code ? "COPIED" : space.code}
+                        </button>
+                      </div>
+                      <div className="space-card-actions">
+                        <button
+                          className="btn danger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeSpace(space);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          <aside className="avatar-dock">
+            <div className="avatar-dock-heading">
+              <p className="eyebrow">PLAYER PROFILE</p>
+              <h2>Choose your avatar</h2>
+              <p>Everyone in a room sees this character.</p>
             </div>
-          )}
-        </section>
+            {avatars.length === 0 ? (
+              <p className="muted">No avatars available yet.</p>
+            ) : (
+              <div className="avatar-row">
+                {avatars.map((avatar) => (
+                  <button
+                    key={avatar.id}
+                    className={`avatar-choice${avatar.imageUrl === currentAvatarUrl ? " selected" : ""}`}
+                    onClick={() => pickAvatar(avatar)}
+                    aria-pressed={avatar.imageUrl === currentAvatarUrl}
+                  >
+                    {avatar.imageUrl && (
+                      <img src={avatar.imageUrl} alt="" className="pixel" />
+                    )}
+                    <span className="label">{avatar.name ?? "unnamed"}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </aside>
+        </div>
       </main>
 
       {showCreate && (
@@ -223,14 +326,20 @@ function CreateRoomModal({
       const res = await api.createSpace(name, mapId);
       onCreated(res.spaceId);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not create the room");
+      setError(
+        err instanceof ApiError ? err.message : "Could not create the room",
+      );
       setBusy(false);
     }
   }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <form className="card modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <form
+        className="card modal"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+      >
         <h2 style={{ fontSize: "0.95rem" }}>new room</h2>
 
         <label className="field">

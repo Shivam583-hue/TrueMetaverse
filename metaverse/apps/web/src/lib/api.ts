@@ -17,7 +17,11 @@ export type Element = {
   static: boolean;
 };
 
-export type Avatar = { id: string; imageUrl: string | null; name: string | null };
+export type Avatar = {
+  id: string;
+  imageUrl: string | null;
+  name: string | null;
+};
 
 export type MapTemplate = {
   id: string;
@@ -47,7 +51,7 @@ export type SpaceDetail = {
 export type UserMetadata = {
   userId: string;
   username: string;
-  avatarId?: string; // the avatar's imageUrl, per backend contract
+  avatarId?: string;
 };
 
 export type LeaderboardPeriod = "all" | "daily" | "weekly" | "monthly";
@@ -72,7 +76,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new ApiError(res.status, body.message ?? `Request failed (${res.status})`);
+    throw new ApiError(
+      res.status,
+      body.message ?? `Request failed (${res.status})`,
+    );
   }
   return body as T;
 }
@@ -96,7 +103,9 @@ export const api = {
   mySpaces: () => request<{ spaces: SpaceSummary[] }>("/space/all"),
   officialSpaces: () => request<{ spaces: SpaceSummary[] }>("/space/official"),
   spaceByCode: (code: string) =>
-    request<{ spaceId: string }>(`/space/code/${encodeURIComponent(code.trim())}`),
+    request<{ spaceId: string }>(
+      `/space/code/${encodeURIComponent(code.trim())}`,
+    ),
   space: (spaceId: string) => request<SpaceDetail>(`/space/${spaceId}`),
   createSpace: (name: string, mapId: string) =>
     request<{ spaceId: string; code: string }>("/space", {
@@ -122,9 +131,12 @@ export const api = {
         method: "POST",
         body: JSON.stringify(spaceId ? { spaceId } : {}),
       }),
-    stop: () => request<{ durationSeconds: number }>("/study/stop", { method: "POST" }),
+    stop: () =>
+      request<{ durationSeconds: number }>("/study/stop", { method: "POST" }),
     me: () =>
-      request<{ activeSession: { sessionId: string; startedAt: string } | null }>("/study/me"),
+      request<{
+        activeSession: { sessionId: string; startedAt: string } | null;
+      }>("/study/me"),
     leaderboard: (period: LeaderboardPeriod) =>
       request<{ period: string; entries: LeaderboardEntry[] }>(
         `/study/leaderboard?period=${period}`,

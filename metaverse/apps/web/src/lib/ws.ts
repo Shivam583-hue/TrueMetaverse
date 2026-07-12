@@ -26,7 +26,6 @@ export class ArenaSocket {
     this.ws.onmessage = (event) => {
       const message = JSON.parse(event.data) as OutgoingMessage;
       const handler = this.handlers[message.type];
-      // payload type is narrowed by the discriminated union at the call sites
       (handler as ((p: unknown) => void) | undefined)?.(message.payload);
     };
     this.ws.onclose = () => {

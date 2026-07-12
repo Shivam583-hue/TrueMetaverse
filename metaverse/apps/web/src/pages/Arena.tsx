@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import Phaser from "phaser";
+import type Phaser from "phaser";
 import { api } from "../lib/api";
 import type { LeaderboardEntry, LeaderboardPeriod } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { ArenaSocket } from "../lib/ws";
-import { ArenaScene } from "../game/ArenaScene";
+import { createArenaGame } from "../game/main";
+import { MultiplayerSpaceScene } from "../game/scenes/MultiplayerSpaceScene";
+import SpaceControls from "../components/SpaceControls";
 
 type UserMeta = { username: string | null; avatarUrl: string | null };
 
@@ -21,23 +23,23 @@ export default function Arena() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const { session } = useAuth();
   const canvasRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<ArenaScene | null>(null);
+  const sceneRef = useRef<MultiplayerSpaceScene | null>(null);
   const socketRef = useRef<ArenaSocket | null>(null);
   const metaRef = useRef(new Map<string, UserMeta>());
 
   const [spaceName, setSpaceName] = useState<string | null>(null);
-  const [online, setOnline] = useState<Record<string, string>>({}); // sessionId -> userId
+  const [online, setOnline] = useState<Record<string, string>>({});
   const [meta, setMeta] = useState<Record<string, UserMeta>>({});
-  const [status, setStatus] = useState<"connecting" | "live" | "closed" | "error">("connecting");
+  const [status, setStatus] = useState<
+    "connecting" | "live" | "closed" | "error"
+  >("connecting");
   const [errorText, setErrorText] = useState<string | null>(null);
 
-  // study timer
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const startedAtRef = useRef<number | null>(null);
   startedAtRef.current = startedAt;
 
-  // ranking board
   const [boardOpen, setBoardOpen] = useState(false);
 
   useEffect(() => {
@@ -46,10 +48,9 @@ export default function Arena() {
     let disposed = false;
     let game: Phaser.Game | null = null;
 
-    // events can arrive before Phaser has booted; buffer scene work until ready
     let sceneReady = false;
     let pendingSceneWork: (() => void)[] = [];
-    const withScene = (fn: (scene: ArenaScene) => void) => {
+    const withScene = (fn: (scene: MultiplayerSpaceScene) => void) => {
       if (sceneReady && sceneRef.current) {
         fn(sceneRef.current);
       } else {
@@ -58,34 +59,38 @@ export default function Arena() {
     };
 
     async function ensureMeta(userIds: string[]) {
-      const missing = [...new Set(userIds)].filter((id) => !metaRef.current.has(id));
+      const missing = [...new Set(userIds)].filter(
+        (id) => !metaRef.current.has(id),
+      );
       if (missing.length === 0) return;
-      // reserve before await so concurrent joins don't double-fetch
-      for (const id of missing) metaRef.current.set(id, { username: null, avatarUrl: null });
+      for (const id of missing)
+        metaRef.current.set(id, { username: null, avatarUrl: null });
       try {
         const res = await api.metadataBulk(missing);
         if (disposed) return;
         for (const m of res.avatars) {
           const entry = { username: m.username, avatarUrl: m.avatarId ?? null };
           metaRef.current.set(m.userId, entry);
-          withScene((scene) => scene.setUserMeta(m.userId, entry.username, entry.avatarUrl));
+          withScene((scene) =>
+            scene.setUserMeta(m.userId, entry.username, entry.avatarUrl),
+          );
         }
         setMeta(Object.fromEntries(metaRef.current));
-      } catch {
-        // labels just stay blank; not fatal
-      }
+      } catch {}
     }
 
-    // 1. open the socket and join immediately - never wait for assets
     const socket = new ArenaSocket(
       {
         "space-joined": (payload) => {
           setStatus("live");
-          setOnline(Object.fromEntries(payload.users.map((u) => [u.id, u.userId])));
+          setOnline(
+            Object.fromEntries(payload.users.map((u) => [u.id, u.userId])),
+          );
           ensureMeta([session!.userId, ...payload.users.map((u) => u.userId)]);
           withScene((scene) => {
             scene.spawnLocal(payload.spawn.x, payload.spawn.y, session!.userId);
-            for (const u of payload.users) scene.addRemote(u.id, u.userId, u.x, u.y);
+            for (const u of payload.users)
+              scene.addRemote(u.id, u.userId, u.x, u.y);
             for (const [userId, m] of metaRef.current) {
               scene.setUserMeta(userId, m.username, m.avatarUrl);
             }
@@ -93,14 +98,23 @@ export default function Arena() {
         },
         "user-joined": (payload) => {
           setOnline((prev) => ({ ...prev, [payload.id]: payload.userId }));
-          withScene((scene) => scene.addRemote(payload.id, payload.userId, payload.x, payload.y));
+          withScene((scene) =>
+            scene.addRemote(payload.id, payload.userId, payload.x, payload.y),
+          );
           ensureMeta([payload.userId]).then(() => {
             const m = metaRef.current.get(payload.userId);
-            if (m) withScene((scene) => scene.setUserMeta(payload.userId, m.username, m.avatarUrl));
+            if (m)
+              withScene((scene) =>
+                scene.setUserMeta(payload.userId, m.username, m.avatarUrl),
+              );
           });
         },
-        movement: (payload) => withScene((scene) => scene.moveRemote(payload.id, payload.x, payload.y)),
-        "movement-rejected": (payload) => withScene((scene) => scene.rollbackLocal(payload.x, payload.y)),
+        movement: (payload) =>
+          withScene((scene) =>
+            scene.moveRemote(payload.id, payload.x, payload.y),
+          ),
+        "movement-rejected": (payload) =>
+          withScene((scene) => scene.rollbackLocal(payload.x, payload.y)),
         "user-left": (payload) => {
           withScene((scene) => scene.removeRemote(payload.id));
           setOnline((prev) => {
@@ -115,7 +129,6 @@ export default function Arena() {
     socketRef.current = socket;
     socket.join(spaceId, session.token);
 
-    // 2. fetch the room and boot Phaser in parallel with the handshake
     async function boot() {
       let detail;
       try {
@@ -129,7 +142,7 @@ export default function Arena() {
       setSpaceName(detail.name);
       if (detail.official) setBoardOpen(true);
 
-      const scene = new ArenaScene(detail, {
+      const scene = new MultiplayerSpaceScene({
         onSceneReady: () => {
           sceneReady = true;
           for (const work of pendingSceneWork) work();
@@ -139,23 +152,11 @@ export default function Arena() {
       });
       sceneRef.current = scene;
 
-      game = new Phaser.Game({
-        type: Phaser.AUTO,
-        parent: canvasRef.current!,
-        scene,
-        pixelArt: true,
-        backgroundColor: "#07080f",
-        scale: {
-          mode: Phaser.Scale.RESIZE,
-          width: "100%",
-          height: "100%",
-        },
-      });
+      game = createArenaGame(canvasRef.current!, detail.mapImage, scene);
     }
 
     boot();
 
-    // 3. resume a timer that was already running (e.g. page reload)
     api.study
       .me()
       .then((res) => {
@@ -188,7 +189,6 @@ export default function Arena() {
     };
   }, [spaceId, session]);
 
-  // tick the timer and mirror it above the avatar
   useEffect(() => {
     if (startedAt === null) {
       setElapsed(0);
@@ -228,20 +228,30 @@ export default function Arena() {
         <span className="hud-chip">{spaceName ?? "..."}</span>
         {status !== "live" && (
           <span className="hud-chip mono">
-            {status === "connecting" ? "connecting..." : status === "closed" ? "disconnected" : "error"}
+            {status === "connecting"
+              ? "connecting..."
+              : status === "closed"
+                ? "disconnected"
+                : "error"}
           </span>
         )}
       </div>
 
       <div className="hud top-right">
         <div className="online-list">
-          <div className="title">online · {onlineEntries.length + (status === "live" ? 1 : 0)}</div>
+          <div className="title">
+            online · {onlineEntries.length + (status === "live" ? 1 : 0)}
+          </div>
           <ul>
             {status === "live" && (
               <li>
                 <span className="online-dot" />
                 {meta[session!.userId]?.avatarUrl && (
-                  <img src={meta[session!.userId]!.avatarUrl!} alt="" className="pixel" />
+                  <img
+                    src={meta[session!.userId]!.avatarUrl!}
+                    alt=""
+                    className="pixel"
+                  />
                 )}
                 {session?.username} (you)
               </li>
@@ -250,7 +260,11 @@ export default function Arena() {
               <li key={sid}>
                 <span className="online-dot" />
                 {meta[userId]?.avatarUrl && (
-                  <img src={meta[userId]!.avatarUrl!} alt="" className="pixel" />
+                  <img
+                    src={meta[userId]!.avatarUrl!}
+                    alt=""
+                    className="pixel"
+                  />
                 )}
                 {meta[userId]?.username ?? userId.slice(0, 8)}
               </li>
@@ -260,11 +274,17 @@ export default function Arena() {
         <button className="btn ghost" onClick={() => setBoardOpen(true)}>
           Ranking board
         </button>
+        <SpaceControls />
       </div>
 
       <div className="hud bottom-center">
-        <button className={`btn timer-btn${startedAt !== null ? " running" : ""}`} onClick={toggleTimer}>
-          {startedAt === null ? "▶ Start studying" : `■ Stop · ${formatDuration(elapsed)}`}
+        <button
+          className={`btn timer-btn${startedAt !== null ? " running" : ""}`}
+          onClick={toggleTimer}
+        >
+          {startedAt === null
+            ? "▶ Start studying"
+            : `■ Stop · ${formatDuration(elapsed)}`}
         </button>
         {errorText ? (
           <span className="hud-chip" style={{ color: "var(--alert)" }}>
@@ -306,7 +326,9 @@ function LeaderboardDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="card modal board" onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ fontSize: "0.95rem", color: "var(--coin)" }}>ranking board</h2>
+        <h2 style={{ fontSize: "0.95rem", color: "var(--coin)" }}>
+          ranking board
+        </h2>
         <p className="muted" style={{ marginTop: 0 }}>
           Total study time across every room.
         </p>
@@ -326,7 +348,9 @@ function LeaderboardDialog({ onClose }: { onClose: () => void }) {
         {entries === null ? (
           <p className="muted">Loading...</p>
         ) : entries.length === 0 ? (
-          <div className="empty">No study sessions yet. Start the timer and claim the top spot.</div>
+          <div className="empty">
+            No study sessions yet. Start the timer and claim the top spot.
+          </div>
         ) : (
           <table className="table">
             <thead>
@@ -340,10 +364,21 @@ function LeaderboardDialog({ onClose }: { onClose: () => void }) {
             <tbody>
               {entries.map((entry) => (
                 <tr key={entry.userId}>
-                  <td style={{ fontFamily: "var(--font-mono)" }}>{entry.rank}</td>
-                  <td>{entry.avatarUrl && <img src={entry.avatarUrl} alt="" className="pixel" />}</td>
+                  <td style={{ fontFamily: "var(--font-mono)" }}>
+                    {entry.rank}
+                  </td>
+                  <td>
+                    {entry.avatarUrl && (
+                      <img src={entry.avatarUrl} alt="" className="pixel" />
+                    )}
+                  </td>
                   <td>{entry.username}</td>
-                  <td style={{ textAlign: "right", fontFamily: "var(--font-mono)" }}>
+                  <td
+                    style={{
+                      textAlign: "right",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  >
                     {formatDuration(entry.totalSeconds)}
                   </td>
                 </tr>

@@ -1,8 +1,3 @@
-// Shared protocol types for the WebSocket server and the web client.
-
-// A user as seen inside a space. `id` is the per-connection session id
-// (stable key for rendering, unique even if one account opens two tabs),
-// `userId` is the database user id (key for avatar/username lookups).
 export type SpaceUser = {
   id: string;
   userId: string;
