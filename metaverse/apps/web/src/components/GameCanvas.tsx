@@ -7,16 +7,18 @@ import type { WokaAppearance } from "../game/woka/wokaConfig";
 export default function GameCanvas({
   playerName,
   appearance,
+  spaceId,
 }: {
   playerName: string;
   appearance?: WokaAppearance;
+  spaceId?: string;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
 
   useLayoutEffect(() => {
     if (!parentRef.current || gameRef.current) return;
-    const game = createSpaceGame(parentRef.current);
+    const game = createSpaceGame(parentRef.current, spaceId);
     gameRef.current = game;
     return () => {
       gameRef.current = null;

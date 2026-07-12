@@ -8,7 +8,7 @@ import {
 import type { ReactNode } from "react";
 import { api } from "./api";
 
-type Session = {
+export type Session = {
   token: string;
   userId: string;
   role: "Admin" | "User";

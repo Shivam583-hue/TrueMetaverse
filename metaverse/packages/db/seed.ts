@@ -15,6 +15,17 @@ const libraryMap = {
   mapImage: GARDEN_LIBRARY_IMAGE,
 };
 
+const MULTIROOM_HOUSE_IMAGE = "/assets/spaces/multiroom-house/space.png";
+const multiroomHouseMap = {
+  name: "Multi-room House",
+  width: 26,
+  height: 26,
+  thumbnail: MULTIROOM_HOUSE_IMAGE,
+  mapImage: MULTIROOM_HOUSE_IMAGE,
+};
+
+const templateMaps = [libraryMap, multiroomHouseMap];
+
 const OFFICIAL_CODE = "LIBRARY";
 
 async function main() {
@@ -27,15 +38,22 @@ async function main() {
     console.log(`avatar created: ${avatar.name}`);
   }
 
-  let map = await client.map.findFirst({ where: { name: libraryMap.name } });
-  if (map) {
-    map = await client.map.update({ where: { id: map.id }, data: libraryMap });
-    console.log(`map updated: ${map.name}`);
-  } else {
-    map = await client.map.create({ data: libraryMap });
-    console.log(`map created: ${map.name}`);
+  const maps = new Map<string, Awaited<ReturnType<typeof client.map.create>>>();
+  for (const template of templateMaps) {
+    const existing = await client.map.findFirst({
+      where: { name: template.name },
+    });
+    const map = existing
+      ? await client.map.update({
+          where: { id: existing.id },
+          data: template,
+        })
+      : await client.map.create({ data: template });
+    console.log(`map ${existing ? "updated" : "created"}: ${map.name}`);
+    maps.set(template.name, map);
   }
 
+  const map = maps.get(libraryMap.name)!;
   const spaceData = {
     name: libraryMap.name,
     width: map.width,

@@ -5,8 +5,6 @@ export const WS_URL = "ws://localhost:3001";
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// axios that resolves (instead of throwing) on non-2xx responses, so tests can
-// assert on the status code directly.
 export const http = {
   post: async (...args: any[]) => {
     try {
@@ -102,7 +100,6 @@ export function joinSpace(ws: WebSocket, spaceId: string, token: string) {
   sendWs(ws, "join", { spaceId, token });
 }
 
-// Pull the next message of a given type out of the buffer; null on timeout.
 export async function nextOfType(
   messages: any[],
   type: string,
@@ -117,7 +114,6 @@ export async function nextOfType(
   return null;
 }
 
-// Pull the next message (any type) out of the buffer; null on timeout.
 export async function nextMessage(
   messages: any[],
   timeoutMs = 3000,

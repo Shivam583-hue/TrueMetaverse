@@ -6,7 +6,10 @@ export default function StudyDemo() {
   const { session } = useAuth();
   return (
     <div className="arena-wrap">
-      <GameCanvas playerName={session?.username ?? "Ryuga"} />
+      <GameCanvas
+        playerName={session?.username ?? "Ryuga"}
+        spaceId="multiroom-house"
+      />
       <div className="hud top-right">
         <SpaceControls />
       </div>

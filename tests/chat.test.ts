@@ -33,10 +33,10 @@ describe("Websocket chat", () => {
   afterAll(() => {
     try {
       s1?.ws.close();
-    } catch {}
+    } catch { }
     try {
       s2?.ws.close();
-    } catch {}
+    } catch { }
   });
 
   function clearBuffers() {
@@ -85,7 +85,6 @@ describe("Websocket chat", () => {
     const bad = await nextOfType(s2.messages, "chat", 500);
     expect(bad).toBeNull();
 
-    // the server is still alive and processing chat afterwards
     sendWs(s1.ws, "chat", { text: "still here" });
     const good = await nextOfType(s2.messages, "chat");
     expect(good).not.toBeNull();

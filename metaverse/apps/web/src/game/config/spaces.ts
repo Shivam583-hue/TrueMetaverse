@@ -26,21 +26,12 @@ export const SPACES: Record<string, SpaceConfig> = {
     spawnTile: { x: 27, y: 13 },
     zones: [],
   },
-  "garden-library-sd": {
-    id: "garden-library",
-    imagePath: "/assets/spaces/garden-library/space.png",
-    collisionPath: "/assets/spaces/garden-library/collision.json",
-    tileSize: 24,
-    spawnTile: { x: 27, y: 13 },
-    zones: [],
-  },
-  "study-cafe": {
-    id: "study-cafe",
-    imagePath: "/assets/spaces/study-cafe/space.png",
-    foregroundPath: "/assets/spaces/study-cafe/space-foreground.png",
-    collisionPath: "/assets/spaces/study-cafe/collision.json",
-    tileSize: TILE_SIZE,
-    spawnTile: { x: 20, y: 12 },
+  "multiroom-house": {
+    id: "multiroom-house",
+    imagePath: "/assets/spaces/multiroom-house/space.png",
+    collisionPath: "/assets/spaces/multiroom-house/collision.json",
+    tileSize: 40,
+    spawnTile: { x: 13, y: 13 },
     zones: [],
   },
 };
