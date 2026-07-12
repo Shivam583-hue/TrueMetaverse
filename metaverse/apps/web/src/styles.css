@@ -713,6 +713,56 @@ textarea:focus-visible {
   color: var(--fog);
 }
 
+.invite {
+  position: relative;
+}
+
+.invite-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 232px;
+  background: #14162bf5;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.85rem 0.9rem;
+  box-shadow: 0 10px 30px #0008;
+  backdrop-filter: blur(6px);
+  z-index: 20;
+}
+
+.invite-label {
+  font-family: var(--font-pixel);
+  font-size: 0.62rem;
+  color: var(--portal);
+  margin-bottom: 0.4rem;
+}
+
+.invite-code {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--coin);
+  user-select: all;
+  padding: 0.35rem 0.5rem;
+  border: 1px dashed var(--coin-deep);
+  border-radius: 8px;
+  text-align: center;
+  background: #0000002e;
+}
+
+.invite-hint {
+  font-size: 0.76rem;
+  color: var(--fog);
+  line-height: 1.35;
+  margin: 0.6rem 0 0.7rem;
+}
+
+.invite-copy {
+  width: 100%;
+}
+
 .online-list {
   background: #14162bd9;
   border: 1px solid var(--line);

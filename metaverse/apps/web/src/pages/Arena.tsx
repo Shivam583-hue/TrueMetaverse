@@ -42,6 +42,10 @@ export default function Arena() {
   const metaRef = useRef(new Map<string, UserMeta>());
 
   const [spaceName, setSpaceName] = useState<string | null>(null);
+  const [spaceCode, setSpaceCode] = useState<string | null>(null);
+  const [isOfficial, setIsOfficial] = useState(true);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [online, setOnline] = useState<Record<string, string>>({});
   const [meta, setMeta] = useState<Record<string, UserMeta>>({});
   const [status, setStatus] = useState<
@@ -197,6 +201,8 @@ export default function Arena() {
       }
       if (disposed) return;
       setSpaceName(detail.name);
+      setSpaceCode(detail.code);
+      setIsOfficial(detail.official);
 
       const scene = new MultiplayerSpaceScene({
         onSceneReady: () => {
@@ -271,6 +277,15 @@ export default function Arena() {
     }
   }, [startedAt, spaceId]);
 
+  const copyCode = useCallback(async () => {
+    if (!spaceCode) return;
+    try {
+      await navigator.clipboard.writeText(spaceCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  }, [spaceCode]);
+
   useEffect(() => {
     if (!chatOpen) return;
     const log = chatLogRef.current;
@@ -304,6 +319,31 @@ export default function Arena() {
           ← Leave
         </Link>
         <span className="hud-chip">{spaceName ?? "..."}</span>
+        {!isOfficial && spaceCode && (
+          <div className="invite">
+            <button
+              className="btn ghost"
+              onClick={() => {
+                setCopied(false);
+                setInviteOpen((v) => !v);
+              }}
+            >
+              Invite
+            </button>
+            {inviteOpen && (
+              <div className="invite-pop">
+                <div className="invite-label">Room code</div>
+                <div className="invite-code">{spaceCode}</div>
+                <p className="invite-hint">
+                  Share this code so others can join your room.
+                </p>
+                <button className="btn primary invite-copy" onClick={copyCode}>
+                  {copied ? "Copied ✓" : "Copy code"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {status !== "live" && (
           <span className="hud-chip mono">
             {status === "connecting"

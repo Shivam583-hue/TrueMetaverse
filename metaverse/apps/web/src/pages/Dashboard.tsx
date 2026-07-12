@@ -42,14 +42,14 @@ export default function Dashboard() {
     api
       .officialSpaces()
       .then((res) => setOfficial(res.spaces))
-      .catch(() => {});
+      .catch(() => { });
     if (session) {
       api
         .metadataBulk([session.userId])
         .then((res) =>
           setAppearance(normalizeAppearance(res.avatars[0]?.wokaAppearance)),
         )
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [refreshSpaces, session]);
 
@@ -68,7 +68,7 @@ export default function Dashboard() {
 
   async function saveAppearance(next: WokaAppearance) {
     setAppearance(next);
-    await api.updateWoka(next).catch(() => {});
+    await api.updateWoka(next).catch(() => { });
   }
 
   async function removeSpace(space: SpaceSummary) {
@@ -94,7 +94,7 @@ export default function Dashboard() {
       <main className="lobby">
         <section className="lobby-intro">
           <div>
-            <p className="eyebrow">YOUR STUDY LOBBY</p>
+            <p className="eyebrow">YOUR LOBBY</p>
             <h1>Welcome back, {session?.username ?? "explorer"}.</h1>
             <p className="lobby-lede">
               Choose a shared space, meet your crew, and make this session
@@ -323,7 +323,7 @@ function CreateRoomModal({
         setMaps(res.maps);
         setMapId(res.maps[0]?.id ?? null);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   async function handleSubmit(e: FormEvent) {
