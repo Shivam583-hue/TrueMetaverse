@@ -41,7 +41,7 @@ export type SpaceSummary = {
 
 export type SpaceDetail = {
   name: string;
-  code: string;
+  code: string | null;
   official: boolean;
   mapImage: string | null;
   dimensions: string;

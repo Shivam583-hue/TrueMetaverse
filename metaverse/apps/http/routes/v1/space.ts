@@ -164,7 +164,7 @@ spaceRouter.delete("/:spaceId", userMiddleware, async (req, res) => {
   res.json({ message: "Space deleted" });
 });
 
-spaceRouter.get("/:spaceId", async (req, res) => {
+spaceRouter.get("/:spaceId", userMiddleware, async (req, res) => {
   const space = await client.space.findUnique({
     where: {
       id: req.params.spaceId,
@@ -185,7 +185,7 @@ spaceRouter.get("/:spaceId", async (req, res) => {
 
   res.json({
     name: space.name,
-    code: space.code,
+    code: space.creatorId === req.userId ? space.code : null,
     official: space.official,
     mapImage: space.mapImage,
     dimensions: `${space.width}x${space.height}`,
