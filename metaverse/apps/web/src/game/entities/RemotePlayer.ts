@@ -34,6 +34,10 @@ export class RemotePlayer {
     );
   }
 
+  update(): void {
+    this.movement.update(null);
+  }
+
   applyPosition(tile: TileCoord): void {
     const dx = tile.x - this.serverTile.x;
     const dy = tile.y - this.serverTile.y;

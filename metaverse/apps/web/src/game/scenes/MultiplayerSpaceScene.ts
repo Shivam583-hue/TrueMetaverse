@@ -24,6 +24,11 @@ export class MultiplayerSpaceScene extends SpaceScene {
     this.callbacks.onSceneReady();
   }
 
+  override update(time: number, delta: number): void {
+    super.update(time, delta);
+    for (const remote of this.remotes.values()) remote.update();
+  }
+
   protected override onLocalStep(): void {
     const tile = this.movement.tile;
     this.callbacks.onMoveAttempt(tile.x, tile.y);
