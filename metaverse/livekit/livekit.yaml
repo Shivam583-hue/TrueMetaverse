@@ -1,0 +1,37 @@
+# LiveKit server config.
+#
+# Media normally flows straight to the SFU over UDP. Some networks (strict
+# corporate firewalls, a few mobile carriers) block that, and those clients can
+# only connect through a relay. LiveKit has a TURN server built in, so no
+# separate coturn deployment is needed: it hands each participant TURN
+# credentials in the join response, and the client falls back to the relay on
+# its own. Nothing in the app or the token endpoint has to change.
+port: 7880
+
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  # Production only: the SFU must advertise its public address, not a NAT one.
+  use_external_ip: false
+
+turn:
+  enabled: true
+
+  # TURN over UDP. Works with no domain and no certificate, which is why it is
+  # the part that can be exercised locally.
+  udp_port: 3478
+
+  # TURN over TLS. This is the one that gets through firewalls that only allow
+  # outbound 443/TLS, and it is the reason to bother with TURN at all in
+  # production. It needs a real domain and a real certificate (see README), so
+  # it stays off until this is deployed somewhere.
+  # domain: turn.example.com
+  # cert_file: /etc/livekit/certs/fullchain.pem
+  # key_file: /etc/livekit/certs/privkey.pem
+  # tls_port: 5349
+
+# Development credentials only. In production, remove this block and pass
+# LIVEKIT_KEYS (the secret must be at least 32 characters).
+keys:
+  devkey: devsecretdevsecretdevsecretdevsecret

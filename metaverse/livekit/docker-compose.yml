@@ -2,18 +2,23 @@
 #
 #   docker compose -f metaverse/livekit/docker-compose.yml up -d
 #
-# --dev mode fixes the credentials to devkey/secret, which is what apps/http
-# defaults to (see apps/http/config.ts). Never use --dev in production: set
-# LIVEKIT_URL / LIVEKIT_API_KEY / LIVEKIT_API_SECRET and a real keys: config.
+# Config (including the embedded TURN server) lives in livekit.yaml. The dev
+# credentials there are devkey / devsecretdevsecretdevsecretdevsecret, which is
+# what apps/http defaults to (see apps/http/config.ts). Never ship those: in
+# production set LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET on the http
+# server and give LiveKit real keys.
 #
-# Ports (host networking, so they are bound directly on the host):
-#   7880/tcp  signal websocket + HTTP API  -> ws://localhost:7880
-#   7881/tcp  ICE/TCP fallback
-#   7882/udp  WebRTC media (UDP mux)
+# Ports (host networking, so they bind directly on the host):
+#   7880/tcp        signal websocket + HTTP API  -> ws://localhost:7880
+#   7881/tcp        ICE/TCP fallback
+#   3478/udp        embedded TURN (relay for clients that cannot reach the SFU)
+#   50000-60000/udp WebRTC media
 services:
   livekit:
     image: livekit/livekit-server:v1.9
     container_name: metaverse-livekit
-    command: --dev --bind 0.0.0.0
+    command: --config /etc/livekit/livekit.yaml --bind 0.0.0.0
+    volumes:
+      - ./livekit.yaml:/etc/livekit/livekit.yaml:ro
     network_mode: host
     restart: unless-stopped
