@@ -13,9 +13,6 @@ export type ChatEntry = {
 
 const MAX_MESSAGES = 200;
 
-// Owns the room chat: the message log, the input box, open/closed state, and the
-// side effects that keep them behaving (auto-scroll, and disabling the game
-// keyboard while the box is open so typing doesn't move the avatar).
 export function useArenaChat({
   sceneRef,
   socketRef,

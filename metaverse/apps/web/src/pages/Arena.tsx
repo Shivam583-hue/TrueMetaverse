@@ -1,16 +1,21 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import type { ArenaSocket } from "../lib/ws";
 import { MultiplayerSpaceScene } from "../game/scenes/MultiplayerSpaceScene";
 import { formatDuration } from "../lib/format";
 import { useArenaChat } from "../hooks/useArenaChat";
-import { useArenaConnection } from "../hooks/useArenaConnection";
+import {
+  useArenaConnection,
+  type RtcCallbacks,
+} from "../hooks/useArenaConnection";
 import { useStudyTimer } from "../hooks/useStudyTimer";
 import { useSpaceMusic } from "../hooks/useSpaceMusic";
+import { useVideoChat } from "../hooks/useVideoChat";
 import SpaceControls from "../components/SpaceControls";
 import WokaPreview from "../components/WokaPreview";
 import LeaderboardDialog from "../components/LeaderboardDialog";
+import VideoDock from "../components/VideoDock";
 
 export default function Arena() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -21,6 +26,22 @@ export default function Arena() {
   const socketRef = useRef<ArenaSocket | null>(null);
 
   const chat = useArenaChat({ sceneRef, socketRef });
+
+  // useVideoChat needs conn.videoEnabled, and conn needs the rtc callbacks;
+  // this stable bridge breaks the cycle by delegating to whatever the video
+  // hook produced in the current render.
+  const rtcBridge = useRef<RtcCallbacks | null>(null);
+  const rtcCallbacks = useMemo<RtcCallbacks>(
+    () => ({
+      onPeerJoined: (user, initiate) =>
+        rtcBridge.current?.onPeerJoined(user, initiate),
+      onPeerLeft: (id) => rtcBridge.current?.onPeerLeft(id),
+      onSignal: (from, data) => rtcBridge.current?.onSignal(from, data),
+      onMediaState: (state) => rtcBridge.current?.onMediaState(state),
+    }),
+    [],
+  );
+
   const conn = useArenaConnection({
     spaceId,
     session,
@@ -28,7 +49,11 @@ export default function Arena() {
     sceneRef,
     socketRef,
     pushMessage: chat.pushMessage,
+    rtc: rtcCallbacks,
   });
+  const video = useVideoChat({ enabled: conn.videoEnabled, socketRef });
+  rtcBridge.current = video.rtc;
+
   const timer = useStudyTimer(spaceId, sceneRef, conn.studyEnabled);
   const music = useSpaceMusic(conn.musicUrl);
 
@@ -53,6 +78,15 @@ export default function Arena() {
 
       {conn.musicUrl && (
         <audio ref={music.audioRef} src={conn.musicUrl} loop preload="auto" />
+      )}
+
+      {conn.videoEnabled && session && (
+        <VideoDock
+          video={video}
+          selfUserId={session.userId}
+          selfUsername={session.username}
+          meta={conn.meta}
+        />
       )}
 
       <div className="hud top-left">

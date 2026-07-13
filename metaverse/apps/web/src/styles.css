@@ -698,6 +698,190 @@ textarea:focus-visible {
   transform: translateX(-50%);
 }
 
+.hud.top-center {
+  top: 0.9rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.video-dock {
+  gap: 0.6rem;
+}
+
+.video-card {
+  position: relative;
+  width: 176px;
+  height: 99px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--midnight);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 18px #00000059;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.video-card.speaking {
+  border-color: var(--portal);
+  box-shadow:
+    0 0 0 1px var(--portal),
+    0 0 14px #3ee6c14d;
+}
+
+.video-card video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.video-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 14px;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 30%,
+    var(--dusk-raised),
+    var(--midnight) 82%
+  );
+}
+
+.video-woka {
+  position: relative;
+  display: flex;
+}
+
+/* Ground shadow: the woka stands in the card instead of floating. */
+.video-woka::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 40px;
+  height: 9px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #00000073 30%, transparent 70%);
+}
+
+.video-woka canvas {
+  position: relative;
+  z-index: 1;
+}
+
+.video-initial {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--dusk-raised);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-pixel);
+  font-size: 0.85rem;
+  color: var(--portal);
+}
+
+.video-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 12px 5px 4px;
+  background: linear-gradient(transparent, #14162bcc 70%);
+}
+
+.video-name {
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  line-height: 1.6;
+  color: var(--moonlight);
+  text-shadow: 0 1px 2px #000c;
+}
+
+.video-card.self .video-name {
+  color: var(--portal);
+}
+
+.video-muted {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #14162bcc;
+  border: 1px solid #ff6b8159;
+  color: var(--alert);
+}
+
+.video-muted svg {
+  width: 10px;
+  height: 10px;
+}
+
+.video-toggles {
+  display: flex;
+  gap: 5px;
+}
+
+.video-toggle {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #262a52cc;
+  color: var(--moonlight);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.video-toggle svg {
+  width: 12px;
+  height: 12px;
+}
+
+.video-toggle:hover {
+  background: var(--dusk-raised);
+  border-color: #4a4f8a;
+}
+
+.video-toggle.off {
+  background: #3b1b2ecc;
+  border-color: #ff6b8159;
+  color: var(--alert);
+}
+
+.video-toggle.off:hover {
+  background: #4d2138;
+  border-color: #ff6b8199;
+}
+
+.video-peer-audio {
+  display: none;
+}
+
 .hud-chip {
   background: #14162bd9;
   border: 1px solid var(--line);

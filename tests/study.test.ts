@@ -87,14 +87,25 @@ describe("Study timer", () => {
       );
       expect(response.status).toBe(200);
       expect(response.data.period).toBe(period);
-      expect(response.data.entries.length).toBeLessThanOrEqual(10);
-      const mine = response.data.entries.find(
-        (e: any) => e.userId === user.userId,
-      );
-      expect(mine).toBeDefined();
-      expect(mine.username).toBe(user.username);
-      expect(mine.totalSeconds).toBeGreaterThanOrEqual(1);
-      expect(mine.rank).toBeGreaterThanOrEqual(1);
+      const entries = response.data.entries;
+      expect(entries.length).toBeGreaterThan(0);
+      expect(entries.length).toBeLessThanOrEqual(10);
+      for (let i = 0; i < entries.length; i++) {
+        expect(entries[i].rank).toBe(i + 1);
+        if (i > 0) {
+          expect(entries[i].totalSeconds).toBeLessThanOrEqual(
+            entries[i - 1].totalSeconds,
+          );
+        }
+      }
+      const mine = entries.find((e: any) => e.userId === user.userId);
+      if (mine) {
+        expect(mine.username).toBe(user.username);
+        expect(mine.totalSeconds).toBeGreaterThanOrEqual(1);
+      } else {
+        expect(entries.length).toBe(10);
+        expect(entries[9].totalSeconds).toBeGreaterThanOrEqual(1);
+      }
     }
   });
 

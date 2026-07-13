@@ -17,6 +17,7 @@ export type SpaceConfig = {
   zones: SpaceZone[];
   study?: boolean;
   music?: string;
+  video?: boolean;
 };
 
 export const SPACES: Record<string, SpaceConfig> = {
@@ -45,6 +46,7 @@ export const SPACES: Record<string, SpaceConfig> = {
     tileSize: 40,
     spawnTile: { x: 19, y: 13 },
     zones: [],
+    video: true,
   },
 };
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { RefObject } from "react";
 import type Phaser from "phaser";
 import { api } from "../lib/api";
@@ -11,16 +12,20 @@ import {
   normalizeAppearance,
   type WokaAppearance,
 } from "../game/woka/wokaConfig";
+import type { MediaState, SpaceUser } from "@repo/types";
 import type { ChatEntry } from "./useArenaChat";
 
 export type UserMeta = { username: string | null; appearance: WokaAppearance };
 
 export type ConnectionStatus = "connecting" | "live" | "closed" | "error";
 
-// Owns the live arena session: the websocket, the Phaser game/scene lifecycle,
-// per-user metadata, and the derived UI state (who's online, room info, status).
-// Chat rendering lives elsewhere; this hook just forwards chat/system events to
-// the supplied `pushMessage`.
+export type RtcCallbacks = {
+  onPeerJoined: (user: SpaceUser, initiate: boolean) => void;
+  onPeerLeft: (id: string) => void;
+  onSignal: (from: string, data: unknown) => void;
+  onMediaState: (state: MediaState) => void;
+};
+
 export function useArenaConnection({
   spaceId,
   session,
@@ -28,6 +33,7 @@ export function useArenaConnection({
   sceneRef,
   socketRef,
   pushMessage,
+  rtc,
 }: {
   spaceId: string | undefined;
   session: Session | null;
@@ -35,14 +41,18 @@ export function useArenaConnection({
   sceneRef: RefObject<MultiplayerSpaceScene | null>;
   socketRef: RefObject<ArenaSocket | null>;
   pushMessage: (entry: Omit<ChatEntry, "key">) => void;
+  rtc?: RtcCallbacks;
 }) {
   const metaRef = useRef(new Map<string, UserMeta>());
+  const rtcRef = useRef<RtcCallbacks | undefined>(rtc);
+  rtcRef.current = rtc;
 
   const [spaceName, setSpaceName] = useState<string | null>(null);
   const [spaceCode, setSpaceCode] = useState<string | null>(null);
   const [isOfficial, setIsOfficial] = useState(true);
   const [studyEnabled, setStudyEnabled] = useState(false);
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
+  const [videoEnabled, setVideoEnabled] = useState(false);
   const [online, setOnline] = useState<Record<string, string>>({});
   const [meta, setMeta] = useState<Record<string, UserMeta>>({});
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
@@ -88,7 +98,7 @@ export function useArenaConnection({
           );
         }
         setMeta(Object.fromEntries(metaRef.current));
-      } catch {}
+      } catch { }
     }
 
     const nameOf = (userId: string) =>
@@ -110,9 +120,11 @@ export function useArenaConnection({
               scene.setUserMeta(userId, m.username, m.appearance);
             }
           });
+          for (const u of payload.users) rtcRef.current?.onPeerJoined(u, true);
         },
         "user-joined": (payload) => {
           setOnline((prev) => ({ ...prev, [payload.id]: payload.userId }));
+          rtcRef.current?.onPeerJoined(payload, false);
           withScene((scene) =>
             scene.addRemote(payload.id, payload.userId, payload.x, payload.y),
           );
@@ -138,6 +150,7 @@ export function useArenaConnection({
           withScene((scene) => scene.rollbackLocal(payload.x, payload.y)),
         "user-left": (payload) => {
           withScene((scene) => scene.removeRemote(payload.id));
+          rtcRef.current?.onPeerLeft(payload.id);
           pushMessage({
             kind: "system",
             userId: payload.userId,
@@ -158,11 +171,13 @@ export function useArenaConnection({
             at: payload.at,
           });
         },
+        "rtc-signal": (payload) =>
+          rtcRef.current?.onSignal(payload.from, payload.data),
+        "media-state": (payload) => rtcRef.current?.onMediaState(payload),
       },
       () => setStatus("closed"),
     );
     socketRef.current = socket;
-    socket.join(spaceId, session.token);
 
     async function boot() {
       let detail;
@@ -179,8 +194,12 @@ export function useArenaConnection({
       setIsOfficial(detail.official);
 
       const config = resolveSpaceConfig(detail.mapImage);
-      setStudyEnabled(config.study === true);
-      setMusicUrl(config.music ?? null);
+      flushSync(() => {
+        setStudyEnabled(config.study === true);
+        setMusicUrl(config.music ?? null);
+        setVideoEnabled(config.video === true);
+      });
+      socket.join(spaceId!, session!.token);
 
       const scene = new MultiplayerSpaceScene({
         onSceneReady: () => {
@@ -212,6 +231,7 @@ export function useArenaConnection({
     isOfficial,
     studyEnabled,
     musicUrl,
+    videoEnabled,
     online,
     meta,
     status,

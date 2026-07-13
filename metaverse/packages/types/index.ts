@@ -3,6 +3,8 @@ export type SpaceUser = {
   userId: string;
   x: number;
   y: number;
+  mic?: boolean;
+  cam?: boolean;
 };
 
 export type ChatMessage = {
@@ -12,10 +14,19 @@ export type ChatMessage = {
   at: number;
 };
 
+export type MediaState = {
+  id: string;
+  userId: string;
+  mic: boolean;
+  cam: boolean;
+};
+
 export type IncomingMessage =
   | { type: "join"; payload: { spaceId: string; token: string } }
   | { type: "move"; payload: { x: number; y: number } }
-  | { type: "chat"; payload: { text: string } };
+  | { type: "chat"; payload: { text: string } }
+  | { type: "rtc-signal"; payload: { to: string; data: unknown } }
+  | { type: "media-state"; payload: { mic: boolean; cam: boolean } };
 
 export type OutgoingMessage =
   | {
@@ -29,4 +40,6 @@ export type OutgoingMessage =
   | { type: "movement"; payload: SpaceUser }
   | { type: "movement-rejected"; payload: { x: number; y: number } }
   | { type: "user-left"; payload: { id: string; userId: string } }
-  | { type: "chat"; payload: ChatMessage };
+  | { type: "chat"; payload: ChatMessage }
+  | { type: "rtc-signal"; payload: { from: string; data: unknown } }
+  | { type: "media-state"; payload: MediaState };
