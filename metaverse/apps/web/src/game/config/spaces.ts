@@ -84,6 +84,14 @@ export const SPACES: Record<string, SpaceConfig> = {
       lecternRadius: 1,
     },
   },
+  "classroom": {
+    id: "classroom",
+    imagePath: "/assets/spaces/classroom/classroom.png",
+    collisionPath: "/assets/spaces/classroom/collision.json",
+    tileSize: 40,
+    spawnTile: { x: 19, y: 13 },
+    zones: [],
+  }
 };
 
 export const DEFAULT_SPACE_ID = "garden-library";

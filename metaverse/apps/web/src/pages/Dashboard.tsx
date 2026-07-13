@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import TopBar from "../components/TopBar";
+import ConfirmDialog from "../components/ConfirmDialog";
 import WokaCustomizer from "../components/WokaCustomizer";
 import WokaPreview from "../components/WokaPreview";
 import { api, ApiError } from "../lib/api";
@@ -28,6 +29,10 @@ export default function Dashboard() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
+  const [pendingDelete, setPendingDelete] = useState<SpaceSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const refreshSpaces = useCallback(() => {
     api
       .mySpaces()
@@ -42,14 +47,14 @@ export default function Dashboard() {
     api
       .officialSpaces()
       .then((res) => setOfficial(res.spaces))
-      .catch(() => { });
+      .catch(() => {});
     if (session) {
       api
         .metadataBulk([session.userId])
         .then((res) =>
           setAppearance(normalizeAppearance(res.avatars[0]?.wokaAppearance)),
         )
-        .catch(() => { });
+        .catch(() => {});
     }
   }, [refreshSpaces, session]);
 
@@ -68,14 +73,29 @@ export default function Dashboard() {
 
   async function saveAppearance(next: WokaAppearance) {
     setAppearance(next);
-    await api.updateWoka(next).catch(() => { });
+    await api.updateWoka(next).catch(() => {});
   }
 
-  async function removeSpace(space: SpaceSummary) {
-    if (!confirm(`Delete "${space.name}"? Everyone loses access to it.`))
-      return;
-    await api.deleteSpace(space.id);
-    refreshSpaces();
+  function askToDelete(space: SpaceSummary) {
+    setDeleteError(null);
+    setPendingDelete(space);
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await api.deleteSpace(pendingDelete.id);
+      setPendingDelete(null);
+      refreshSpaces();
+    } catch (err) {
+      setDeleteError(
+        err instanceof ApiError ? err.message : "Could not delete the room",
+      );
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function copyRoomCode(code: string) {
@@ -248,7 +268,7 @@ export default function Dashboard() {
                           className="btn danger"
                           onClick={(e) => {
                             e.stopPropagation();
-                            removeSpace(space);
+                            askToDelete(space);
                           }}
                         >
                           Delete
@@ -299,6 +319,36 @@ export default function Dashboard() {
           onCreated={(spaceId) => navigate(`/space/${spaceId}`)}
         />
       )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete this room?"
+          danger
+          busy={deleting}
+          error={deleteError}
+          confirmLabel="Delete room"
+          busyLabel="Deleting..."
+          cancelLabel="Keep it"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={confirmDelete}
+        >
+          <div className="confirm-room">
+            <div className="confirm-thumb">
+              {pendingDelete.thumbnail && (
+                <img src={pendingDelete.thumbnail} alt="" />
+              )}
+            </div>
+            <div>
+              <p className="confirm-room-name">{pendingDelete.name}</p>
+              <p className="confirm-room-code">{pendingDelete.code}</p>
+            </div>
+          </div>
+          <p>
+            Everyone loses access, and the room code stops working. This cannot
+            be undone.
+          </p>
+        </ConfirmDialog>
+      )}
     </>
   );
 }
@@ -323,7 +373,7 @@ function CreateRoomModal({
         setMaps(res.maps);
         setMapId(res.maps[0]?.id ?? null);
       })
-      .catch(() => { });
+      .catch(() => {});
   }, []);
 
   async function handleSubmit(e: FormEvent) {

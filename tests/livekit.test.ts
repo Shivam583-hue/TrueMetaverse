@@ -22,7 +22,6 @@ describe("LiveKit access tokens", () => {
     user = await makeUser("livekit");
     videoSpaceId = (await createVideoRoom(user.token, "LiveKit office"))
       .spaceId;
-    // createRoom uses the Study Library map, which is not video-enabled.
     plainSpaceId = (await createRoom(user.token, "LiveKit library")).spaceId;
   });
 

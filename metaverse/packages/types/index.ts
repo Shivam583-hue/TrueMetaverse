@@ -5,9 +5,6 @@ export type SpaceUser = {
   y: number;
 };
 
-// Which official maps carry which capabilities, keyed by the map's image path
-// (Space.mapImage in the database). Shared so the http server can authorize a
-// video token for a space without trusting the client's own space config.
 export type SpaceCapabilities = {
   study?: boolean;
   video?: boolean;

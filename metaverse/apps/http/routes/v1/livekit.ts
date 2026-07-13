@@ -56,8 +56,6 @@ async function setSources(
       canPublishSources: sources,
       hidden: false,
       recorder: false,
-      // Keep the zone attribute writable; taking the lectern must not cost the
-      // presenter their ability to say which room they are in.
       canUpdateMetadata: true,
       agent: false,
       canSubscribeMetrics: false,
@@ -113,8 +111,6 @@ livekitRouter.post("/token", userMiddleware, async (req, res) => {
     canPublish: true,
     canSubscribe: true,
     canPublishSources: DEFAULT_SOURCES,
-    // Lets the client publish which room of the map it is standing in, which is
-    // what scopes who can hear whom.
     canUpdateOwnMetadata: true,
   });
 

@@ -33,7 +33,16 @@ const virtualOfficeMap = {
   mapImage: VIRTUAL_OFFICE_IMAGE,
 };
 
-const templateMaps = [libraryMap, multiroomHouseMap, virtualOfficeMap];
+const CLASSROOM_IMAGE = "/assets/spaces/classroom/classroom.png"
+const classroomMap = {
+  name: "Classroom",
+  width: 37,
+  height: 28,
+  thumbnail: CLASSROOM_IMAGE,
+  mapImage: CLASSROOM_IMAGE,
+}
+
+const templateMaps = [libraryMap, multiroomHouseMap, virtualOfficeMap, classroomMap];
 
 const OFFICIAL_CODE = "LIBRARY";
 
@@ -54,9 +63,9 @@ async function main() {
     });
     const map = existing
       ? await client.map.update({
-          where: { id: existing.id },
-          data: template,
-        })
+        where: { id: existing.id },
+        data: template,
+      })
       : await client.map.create({ data: template });
     console.log(`map ${existing ? "updated" : "created"}: ${map.name}`);
     maps.set(template.name, map);

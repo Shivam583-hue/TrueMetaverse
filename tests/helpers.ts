@@ -71,7 +71,6 @@ export async function getMapIdByName(name: string): Promise<string> {
   return response.data.maps.find((m: any) => m.name === name).id;
 }
 
-// A room on the Virtual Office map, the only video-enabled map.
 export async function createVideoRoom(
   token: string,
   name = "Video room",
@@ -97,8 +96,6 @@ export async function createRoom(
   );
   return { spaceId: response.data.spaceId, code: response.data.code };
 }
-
-// --- websocket helpers ----------------------------------------------------
 
 export type Socket = { ws: WebSocket; messages: any[] };
 

@@ -19,17 +19,12 @@ export type PeerView = {
   speaking: boolean;
   lastSpokeAt: number;
   joinedAt: number;
-  // Which room of the map they are standing in, and whether that is the same one
-  // as us - you are only in a call with the people you share a room with.
   zone: string;
   audible: boolean;
 };
 
 type Peer = PeerView;
 
-// The open floor is a zone like any other: everyone who is not in a named room
-// is in it together, so "leaving the presentation room" puts you back with
-// everybody else rather than in silence.
 export const OPEN_ZONE = "open";
 const ZONE_ATTRIBUTE = "zone";
 
@@ -50,8 +45,6 @@ export function useVideoChat({
 }: {
   enabled: boolean;
   spaceId: string | undefined;
-  // The zone the local player is standing in. Everyone in the same zone hears
-  // each other, and nobody else.
   zone?: string;
 }) {
   const roomRef = useRef<Room | null>(null);
@@ -63,7 +56,6 @@ export function useVideoChat({
   spaceIdRef.current = spaceId;
   const zoneRef = useRef(zone);
   zoneRef.current = zone;
-  // Set by the connect effect, so the zone effect below can reach into the room.
   const applyZoneRef = useRef<(() => void) | null>(null);
 
   const [micOn, setMicOn] = useState(false);
@@ -134,11 +126,6 @@ export function useVideoChat({
         syncPeers();
       };
 
-      // Who is in your call is decided here, and it is enforced by subscription,
-      // not by muting: media from another room never reaches this browser at
-      // all. Called whenever the local player changes room, a peer changes room,
-      // or a peer publishes something new. The room joins with autoSubscribe
-      // off, so nothing is ever heard before this rule is applied to it.
       const applyZones = () => {
         const current = room;
         if (!current) return;
@@ -148,8 +135,6 @@ export function useVideoChat({
           const peer = peerOf(p);
           peer.zone = zoneOf(p);
           peer.audible = peer.zone === myZone;
-          // Out of earshot is out of the conversation: their speaking ring would
-          // otherwise flash for a talk you cannot hear.
           if (!peer.audible) peer.speaking = false;
 
           for (const pub of p.trackPublications.values()) {
@@ -174,9 +159,7 @@ export function useVideoChat({
           readMediaFlags(p, peerOf(p));
           applyZones();
         })
-        // Somebody walked into or out of a room.
         .on(RoomEvent.ParticipantAttributesChanged, () => applyZones())
-        // A new mic publication has to be subscribed (or not) by the same rule.
         .on(RoomEvent.TrackPublished, () => applyZones())
         .on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => {
           peersRef.current.delete(p.identity);
@@ -280,23 +263,17 @@ export function useVideoChat({
         });
 
       try {
-        // Nothing is subscribed on arrival: applyZones decides what this
-        // browser is allowed to receive, so audio from another room is never
-        // delivered even for a moment.
         await room.connect(url, token, { autoSubscribe: false });
       } catch (err) {
         console.error("livekit connect failed", err);
         return;
       }
-      // Leaving during connect() would otherwise strand a live room.
       if (cancelled) {
         room.disconnect();
         return;
       }
       roomRef.current = room;
 
-      // Register whoever is already here, then publish our zone and subscribe to
-      // the ones we share a room with. Their tracks arrive via TrackSubscribed.
       for (const p of room.remoteParticipants.values()) {
         readMediaFlags(p, peerOf(p));
       }
@@ -321,9 +298,6 @@ export function useVideoChat({
     };
   }, [enabled, spaceId]);
 
-  // Walking through a door re-publishes the zone and rebuilds the call around
-  // us: entering the presentation room leaves the open floor behind, and
-  // leaving it puts everyone else back.
   useEffect(() => {
     applyZoneRef.current?.();
   }, [zone]);
@@ -397,11 +371,8 @@ export function useVideoChat({
     }
   }, []);
 
-  // Only the people you share a room with are in your call at all: the rest are
-  // tracked (so walking back to them is instant) but neither seen nor heard.
   const audiblePeers = useMemo(() => peers.filter((p) => p.audible), [peers]);
 
-  // The three guest slots: most recent speakers first, then join order.
   const slots = useMemo(
     () =>
       [...audiblePeers]

@@ -33,7 +33,6 @@ export default function Arena() {
     socketRef,
     pushMessage: chat.pushMessage,
   });
-  // The room you are standing in is the call you are in.
   const zone = useMemo(
     () => resolveZone(conn.spaceConfig, conn.localTile),
     [conn.spaceConfig, conn.localTile],
