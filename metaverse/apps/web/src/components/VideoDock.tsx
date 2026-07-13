@@ -78,6 +78,40 @@ function Placeholder({ meta, name }: { meta?: UserMeta; name: string }) {
   );
 }
 
+// Every peer is audible, whether or not they hold one of the four cards, so
+// their audio plays here rather than off the card's <video> (which stays muted).
+//
+// The track has to be re-attached whenever it changes: a media element only
+// renders the tracks its stream held at the moment it was attached, and a peer's
+// audio track appears later, when they first switch their mic on.
+function PeerAudio({ peer }: { peer: PeerView }) {
+  const ref = useRef<HTMLAudioElement>(null);
+  const track = peer.stream.getAudioTracks()[0] ?? null;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!track) {
+      el.srcObject = null;
+      return;
+    }
+
+    el.srcObject = new MediaStream([track]);
+    const play = () => el.play().catch(() => {});
+    play();
+
+    // Autoplay stays blocked until the tab has seen a gesture.
+    window.addEventListener("pointerdown", play);
+    window.addEventListener("keydown", play);
+    return () => {
+      window.removeEventListener("pointerdown", play);
+      window.removeEventListener("keydown", play);
+    };
+  }, [track]);
+
+  return <audio ref={ref} autoPlay playsInline className="video-peer-audio" />;
+}
+
 function PeerCard({
   peer,
   name,
@@ -122,20 +156,6 @@ export default function VideoDock({
   selfUsername: string;
   meta: Record<string, UserMeta>;
 }) {
-  const audioEls = useRef(new Map<string, HTMLAudioElement>());
-
-  useEffect(() => {
-    const retry = () => {
-      for (const el of audioEls.current.values()) el.play().catch(() => { });
-    };
-    window.addEventListener("pointerdown", retry);
-    window.addEventListener("keydown", retry);
-    return () => {
-      window.removeEventListener("pointerdown", retry);
-      window.removeEventListener("keydown", retry);
-    };
-  }, []);
-
   const nameOf = (userId: string) =>
     meta[userId]?.username ?? userId.slice(0, 8);
 
@@ -185,22 +205,7 @@ export default function VideoDock({
       </div>
 
       {video.peers.map((peer) => (
-        <audio
-          key={peer.id}
-          autoPlay
-          className="video-peer-audio"
-          ref={(el) => {
-            if (el) {
-              audioEls.current.set(peer.id, el);
-              if (el.srcObject !== peer.stream) {
-                el.srcObject = peer.stream;
-                el.play().catch(() => { });
-              }
-            } else {
-              audioEls.current.delete(peer.id);
-            }
-          }}
-        />
+        <PeerAudio key={peer.id} peer={peer} />
       ))}
     </>
   );
