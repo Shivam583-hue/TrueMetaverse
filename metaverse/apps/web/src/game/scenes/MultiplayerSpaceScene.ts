@@ -5,6 +5,10 @@ import type { WokaAppearance } from "../woka/wokaConfig";
 export type ArenaCallbacks = {
   onSceneReady: () => void;
   onMoveAttempt: (x: number, y: number) => void;
+  // Where the local player actually stands, for room-scoped features. Unlike
+  // onMoveAttempt this also fires on spawn and on a server rollback, so it never
+  // reports a tile the player was bounced out of.
+  onLocalTile?: (x: number, y: number) => void;
 };
 
 const DEPTH_REMOTE = 9;
@@ -32,12 +36,14 @@ export class MultiplayerSpaceScene extends SpaceScene {
   protected override onLocalStep(): void {
     const tile = this.movement.tile;
     this.callbacks.onMoveAttempt(tile.x, tile.y);
+    this.callbacks.onLocalTile?.(tile.x, tile.y);
   }
 
   spawnLocal(x: number, y: number, userId: string): void {
     this.localUserId = userId;
     this.movement.forceSetTile({ x, y });
     this.cameras.main.centerOn(this.player.x, this.player.y);
+    this.callbacks.onLocalTile?.(x, y);
   }
 
   addRemote(id: string, userId: string, x: number, y: number): void {
@@ -68,6 +74,7 @@ export class MultiplayerSpaceScene extends SpaceScene {
 
   rollbackLocal(x: number, y: number): void {
     this.movement.forceSetTile({ x, y });
+    this.callbacks.onLocalTile?.(x, y);
   }
 
   setLocalTimer(text: string | null): void {

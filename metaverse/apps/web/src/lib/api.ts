@@ -136,6 +136,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ spaceId }),
     }),
+  claimPresenter: (spaceId: string, identity: string) =>
+    request<{ message: string }>("/livekit/present", {
+      method: "POST",
+      body: JSON.stringify({ spaceId, identity }),
+    }),
+  releasePresenter: (spaceId: string, identity: string) =>
+    request<{ message: string }>("/livekit/present/release", {
+      method: "POST",
+      body: JSON.stringify({ spaceId, identity }),
+    }),
 
   study: {
     start: (spaceId?: string) =>

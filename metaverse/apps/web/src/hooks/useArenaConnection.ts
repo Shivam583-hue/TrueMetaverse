@@ -6,7 +6,11 @@ import { api } from "../lib/api";
 import type { Session } from "../lib/auth";
 import { ArenaSocket } from "../lib/ws";
 import { createArenaGame } from "../game/main";
-import { resolveSpaceConfig } from "../game/config/spaces";
+import {
+  resolveSpaceConfig,
+  type SpaceConfig,
+  type TileCoord,
+} from "../game/config/spaces";
 import { MultiplayerSpaceScene } from "../game/scenes/MultiplayerSpaceScene";
 import {
   normalizeAppearance,
@@ -45,6 +49,8 @@ export function useArenaConnection({
   const [studyEnabled, setStudyEnabled] = useState(false);
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
   const [videoEnabled, setVideoEnabled] = useState(false);
+  const [spaceConfig, setSpaceConfig] = useState<SpaceConfig | null>(null);
+  const [localTile, setLocalTile] = useState<TileCoord | null>(null);
   const [online, setOnline] = useState<Record<string, string>>({});
   const [meta, setMeta] = useState<Record<string, UserMeta>>({});
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
@@ -184,6 +190,7 @@ export function useArenaConnection({
         setStudyEnabled(config.study === true);
         setMusicUrl(config.music ?? null);
         setVideoEnabled(config.video === true);
+        setSpaceConfig(config);
       });
       socket.join(spaceId!, session!.token);
 
@@ -194,6 +201,10 @@ export function useArenaConnection({
           pendingSceneWork = [];
         },
         onMoveAttempt: (x, y) => socketRef.current?.move(x, y),
+        onLocalTile: (x, y) =>
+          setLocalTile((prev) =>
+            prev && prev.x === x && prev.y === y ? prev : { x, y },
+          ),
       });
       sceneRef.current = scene;
 
@@ -218,6 +229,8 @@ export function useArenaConnection({
     studyEnabled,
     musicUrl,
     videoEnabled,
+    spaceConfig,
+    localTile,
     online,
     meta,
     status,

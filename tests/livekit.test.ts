@@ -88,6 +88,67 @@ describe("LiveKit access tokens", () => {
     expect(payload.exp - payload.nbf).toBe(6 * 60 * 60);
   });
 
+  test("The token does not grant screen share - that is the lectern's to give", async () => {
+    const response = await http.post(
+      `${BACKEND_URL}/api/v1/livekit/token`,
+      { spaceId: videoSpaceId },
+      authHeader(user.token),
+    );
+    const payload = decodeJwtPayload(response.data.token);
+    // TrackSource: 1 = camera, 2 = microphone, 3 = screen share.
+    expect(payload.video.canPublishSources).toEqual(["camera", "microphone"]);
+  });
+
+  test("Taking the lectern requires auth and a video space", async () => {
+    const identity = `${user.userId}:tab1`;
+
+    const noAuth = await http.post(`${BACKEND_URL}/api/v1/livekit/present`, {
+      spaceId: videoSpaceId,
+      identity,
+    });
+    expect(noAuth.status).toBe(403);
+
+    const badBody = await http.post(
+      `${BACKEND_URL}/api/v1/livekit/present`,
+      { spaceId: videoSpaceId },
+      authHeader(user.token),
+    );
+    expect(badBody.status).toBe(400);
+
+    const unknownSpace = await http.post(
+      `${BACKEND_URL}/api/v1/livekit/present`,
+      { spaceId: "no-such-space", identity },
+      authHeader(user.token),
+    );
+    expect(unknownSpace.status).toBe(404);
+
+    const notVideo = await http.post(
+      `${BACKEND_URL}/api/v1/livekit/present`,
+      { spaceId: plainSpaceId, identity },
+      authHeader(user.token),
+    );
+    expect(notVideo.status).toBe(403);
+  });
+
+  test("You cannot take the lectern using someone else's session", async () => {
+    const other = await makeUser("livekit");
+    const response = await http.post(
+      `${BACKEND_URL}/api/v1/livekit/present`,
+      { spaceId: videoSpaceId, identity: `${other.userId}:tab1` },
+      authHeader(user.token),
+    );
+    expect(response.status).toBe(403);
+  });
+
+  test("You cannot take the lectern without being connected to the room", async () => {
+    const response = await http.post(
+      `${BACKEND_URL}/api/v1/livekit/present`,
+      { spaceId: videoSpaceId, identity: `${user.userId}:ghost` },
+      authHeader(user.token),
+    );
+    expect(response.status).toBe(409);
+  });
+
   test("Each request gets a fresh identity so one user can open two tabs", async () => {
     const first = await http.post(
       `${BACKEND_URL}/api/v1/livekit/token`,

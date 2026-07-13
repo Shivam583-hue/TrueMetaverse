@@ -8,7 +8,7 @@ import type {
   Room,
   TrackPublication,
 } from "livekit-client";
-import { api } from "../lib/api";
+import { api, ApiError } from "../lib/api";
 
 export type PeerView = {
   id: string;
@@ -22,6 +22,17 @@ export type PeerView = {
 };
 
 type Peer = PeerView;
+
+// Whoever currently holds the projector, and the screen they are sharing. The
+// presenter sees their own share here too, so "watch" shows the same thing to
+// everyone.
+export type ScreenShare = {
+  identity: string;
+  userId: string;
+  name: string;
+  isSelf: boolean;
+  stream: MediaStream;
+};
 
 // The token identity is `${userId}:${tabSuffix}` so one user can open several
 // tabs without LiveKit kicking the older session for a duplicate identity.
@@ -43,10 +54,15 @@ export function useVideoChat({
   const peersRef = useRef(new Map<string, Peer>());
   const localStreamRef = useRef<MediaStream | null>(null);
   const toggleBusyRef = useRef(false);
+  const shareBusyRef = useRef(false);
+  const spaceIdRef = useRef(spaceId);
+  spaceIdRef.current = spaceId;
 
   const [micOn, setMicOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
   const [peers, setPeers] = useState<PeerView[]>([]);
+  const [screenShare, setScreenShare] = useState<ScreenShare | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!enabled || !spaceId) return;
@@ -115,15 +131,31 @@ export function useVideoChat({
         })
         .on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => {
           peersRef.current.delete(p.identity);
+          // A presenter who walks out (or crashes) frees the projector.
+          setScreenShare((prev) =>
+            prev?.identity === p.identity ? null : prev,
+          );
           syncPeers();
         })
         .on(
           RoomEvent.TrackSubscribed,
           (
             track: RemoteTrack,
-            _pub: RemoteTrackPublication,
+            pub: RemoteTrackPublication,
             p: RemoteParticipant,
           ) => {
+            // A shared screen goes to the projector, not into the peer's card -
+            // otherwise it would replace their face in the dock.
+            if (pub.source === Track.Source.ScreenShare) {
+              setScreenShare({
+                identity: p.identity,
+                userId: userIdOf(p.identity),
+                name: p.name || userIdOf(p.identity),
+                isSelf: false,
+                stream: new MediaStream([track.mediaStreamTrack]),
+              });
+              return;
+            }
             const peer = peerOf(p);
             peer.stream.addTrack(track.mediaStreamTrack);
             readMediaFlags(p, peer);
@@ -134,9 +166,15 @@ export function useVideoChat({
           RoomEvent.TrackUnsubscribed,
           (
             track: RemoteTrack,
-            _pub: RemoteTrackPublication,
+            pub: RemoteTrackPublication,
             p: RemoteParticipant,
           ) => {
+            if (pub.source === Track.Source.ScreenShare) {
+              setScreenShare((prev) =>
+                prev?.identity === p.identity ? null : prev,
+              );
+              return;
+            }
             const peer = peersRef.current.get(p.identity);
             if (!peer) return;
             peer.stream.removeTrack(track.mediaStreamTrack);
@@ -163,7 +201,19 @@ export function useVideoChat({
         })
         .on(RoomEvent.LocalTrackPublished, (pub: LocalTrackPublication) => {
           const track = pub.track?.mediaStreamTrack;
-          if (!track || pub.source !== Track.Source.Camera) return;
+          if (!track) return;
+          if (pub.source === Track.Source.ScreenShare) {
+            const me = room!.localParticipant;
+            setScreenShare({
+              identity: me.identity,
+              userId: userIdOf(me.identity),
+              name: me.name || "you",
+              isSelf: true,
+              stream: new MediaStream([track]),
+            });
+            return;
+          }
+          if (pub.source !== Track.Source.Camera) return;
           if (!localStreamRef.current)
             localStreamRef.current = new MediaStream();
           localStreamRef.current.addTrack(track);
@@ -171,7 +221,12 @@ export function useVideoChat({
         })
         .on(RoomEvent.LocalTrackUnpublished, (pub: LocalTrackPublication) => {
           const track = pub.track?.mediaStreamTrack;
-          if (!track || !localStreamRef.current) return;
+          if (!track) return;
+          if (pub.source === Track.Source.ScreenShare) {
+            setScreenShare((prev) => (prev?.isSelf ? null : prev));
+            return;
+          }
+          if (!localStreamRef.current) return;
           localStreamRef.current.removeTrack(track);
           syncPeers();
         })
@@ -193,12 +248,24 @@ export function useVideoChat({
       }
       roomRef.current = room;
 
-      // Seed whoever was already in the room before we joined.
+      // Seed whoever was already in the room before we joined, including a talk
+      // already in progress.
       for (const p of room.remoteParticipants.values()) {
         const peer = peerOf(p);
         readMediaFlags(p, peer);
         for (const pub of p.trackPublications.values()) {
-          if (pub.track) peer.stream.addTrack(pub.track.mediaStreamTrack);
+          if (!pub.track) continue;
+          if (pub.source === Track.Source.ScreenShare) {
+            setScreenShare({
+              identity: p.identity,
+              userId: userIdOf(p.identity),
+              name: p.name || userIdOf(p.identity),
+              isSelf: false,
+              stream: new MediaStream([pub.track.mediaStreamTrack]),
+            });
+            continue;
+          }
+          peer.stream.addTrack(pub.track.mediaStreamTrack);
         }
       }
       syncPeers();
@@ -206,12 +273,20 @@ export function useVideoChat({
 
     return () => {
       cancelled = true;
+      // Hand the lectern back on the way out, so leaving mid-talk does not leave
+      // the projector locked for everyone else.
+      const identity = room?.localParticipant?.identity;
+      if (identity && room?.localParticipant?.isScreenShareEnabled && spaceId) {
+        api.releasePresenter(spaceId, identity).catch(() => {});
+      }
       // Safe mid-connect: this aborts the join.
       room?.disconnect();
       roomRef.current = null;
       peersRef.current.clear();
       localStreamRef.current = null;
       setPeers([]);
+      setScreenShare(null);
+      setShareError(null);
       setMicOn(false);
       setCamOn(false);
     };
@@ -245,6 +320,54 @@ export function useVideoChat({
   const toggleMic = useCallback(() => toggleDevice("mic"), [toggleDevice]);
   const toggleCam = useCallback(() => toggleDevice("cam"), [toggleDevice]);
 
+  // Taking the lectern is a server call: it is what grants this session the
+  // screen share source, so the SFU rejects anyone who tries to present without
+  // it, and it fails if someone else already has the projector.
+  const startScreenShare = useCallback(async () => {
+    const room = roomRef.current;
+    const space = spaceIdRef.current;
+    if (!room || !space || shareBusyRef.current) return;
+    shareBusyRef.current = true;
+    setShareError(null);
+    try {
+      const identity = room.localParticipant.identity;
+      await api.claimPresenter(space, identity);
+      try {
+        await room.localParticipant.setScreenShareEnabled(true);
+      } catch (err) {
+        // The browser picker was dismissed, or capture failed. Give the lectern
+        // straight back rather than holding it without presenting.
+        await api.releasePresenter(space, identity).catch(() => {});
+        throw err;
+      }
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error && err.name === "NotAllowedError"
+            ? null // the user simply cancelled the picker
+            : "Could not start sharing";
+      if (message) setShareError(message);
+    } finally {
+      shareBusyRef.current = false;
+    }
+  }, []);
+
+  const stopScreenShare = useCallback(async () => {
+    const room = roomRef.current;
+    const space = spaceIdRef.current;
+    if (!room || !space || shareBusyRef.current) return;
+    shareBusyRef.current = true;
+    try {
+      await room.localParticipant.setScreenShareEnabled(false);
+      await api.releasePresenter(space, room.localParticipant.identity);
+    } catch (err) {
+      console.error("could not stop screen share", err);
+    } finally {
+      shareBusyRef.current = false;
+    }
+  }, []);
+
   // The three guest slots: most recent speakers first, then join order.
   const slots = useMemo(
     () =>
@@ -264,5 +387,9 @@ export function useVideoChat({
     peers,
     slots,
     localStream: localStreamRef,
+    screenShare,
+    shareError,
+    startScreenShare,
+    stopScreenShare,
   };
 }

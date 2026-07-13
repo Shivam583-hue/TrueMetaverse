@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import type { ArenaSocket } from "../lib/ws";
@@ -9,10 +9,12 @@ import { useArenaConnection } from "../hooks/useArenaConnection";
 import { useStudyTimer } from "../hooks/useStudyTimer";
 import { useSpaceMusic } from "../hooks/useSpaceMusic";
 import { useVideoChat } from "../hooks/useVideoChat";
+import { usePresentation } from "../hooks/usePresentation";
 import SpaceControls from "../components/SpaceControls";
 import WokaPreview from "../components/WokaPreview";
 import LeaderboardDialog from "../components/LeaderboardDialog";
 import VideoDock from "../components/VideoDock";
+import ScreenShareDialog from "../components/ScreenShareDialog";
 
 export default function Arena() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -32,6 +34,11 @@ export default function Arena() {
     pushMessage: chat.pushMessage,
   });
   const video = useVideoChat({ enabled: conn.videoEnabled, spaceId });
+  const presentation = usePresentation({
+    config: conn.spaceConfig,
+    tile: conn.localTile,
+    screenShare: video.screenShare,
+  });
 
   const timer = useStudyTimer(spaceId, sceneRef, conn.studyEnabled);
   const music = useSpaceMusic(conn.musicUrl);
@@ -39,6 +46,17 @@ export default function Arena() {
   const [boardOpen, setBoardOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [watching, setWatching] = useState(false);
+
+  // Typing in the dialog (or just having it open) should not walk the avatar.
+  useEffect(() => {
+    sceneRef.current?.setKeyboardEnabled(!watching);
+  }, [watching]);
+
+  // Nothing to watch once the talk ends.
+  useEffect(() => {
+    if (!video.screenShare) setWatching(false);
+  }, [video.screenShare]);
 
   const copyCode = useCallback(async () => {
     if (!conn.spaceCode) return;
@@ -171,6 +189,44 @@ export default function Arena() {
               : `■ Stop · ${formatDuration(timer.elapsed)}`}
           </button>
         )}
+
+        {presentation.canShare && (
+          <button
+            className="btn primary present-btn"
+            onClick={video.startScreenShare}
+          >
+            ⧉ Share your screen
+          </button>
+        )}
+        {presentation.canStopSharing && (
+          <button
+            className="btn present-btn sharing"
+            onClick={video.stopScreenShare}
+          >
+            ■ Stop sharing
+          </button>
+        )}
+        {presentation.canWatch && !watching && (
+          <button
+            className="btn ghost present-btn"
+            onClick={() => setWatching(true)}
+          >
+            ▶ Watch{" "}
+            {video.screenShare!.isSelf
+              ? "your screen"
+              : `${video.screenShare!.name}'s screen`}
+          </button>
+        )}
+        {presentation.blockedBy && (
+          <span className="hud-chip">
+            {presentation.blockedBy} is using the projector
+          </span>
+        )}
+        {video.shareError && (
+          <span className="hud-chip" style={{ color: "var(--alert)" }}>
+            {video.shareError}
+          </span>
+        )}
         {conn.errorText ? (
           <span className="hud-chip" style={{ color: "var(--alert)" }}>
             {conn.errorText} <Link to="/">Back to rooms</Link>
@@ -241,6 +297,13 @@ export default function Arena() {
           </>
         )}
       </div>
+
+      {watching && video.screenShare && (
+        <ScreenShareDialog
+          share={video.screenShare}
+          onClose={() => setWatching(false)}
+        />
+      )}
 
       {boardOpen && <LeaderboardDialog onClose={() => setBoardOpen(false)} />}
     </div>
