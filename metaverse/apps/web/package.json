@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@repo/types": "*",
+    "livekit-client": "^2.20.1",
     "phaser": "^3.90.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

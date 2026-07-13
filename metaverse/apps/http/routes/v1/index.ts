@@ -2,6 +2,7 @@ import { Router } from "express";
 import { userRouter } from "./user";
 import { spaceRouter } from "./space";
 import { studyRouter } from "./study";
+import { livekitRouter } from "./livekit";
 import { SigninSchema, SignupSchema } from "../../types";
 import { hash, compare } from "../../scrypt";
 import client from "@repo/db/client";
@@ -104,3 +105,4 @@ router.get("/maps", async (req, res) => {
 router.use("/user", userRouter);
 router.use("/space", spaceRouter);
 router.use("/study", studyRouter);
+router.use("/livekit", livekitRouter);

@@ -66,6 +66,25 @@ export async function getLibraryMapId(): Promise<string> {
   return response.data.maps.find((m: any) => m.name === "Study Library").id;
 }
 
+export async function getMapIdByName(name: string): Promise<string> {
+  const response = await http.get(`${BACKEND_URL}/api/v1/maps`);
+  return response.data.maps.find((m: any) => m.name === name).id;
+}
+
+// A room on the Virtual Office map, the only video-enabled map.
+export async function createVideoRoom(
+  token: string,
+  name = "Video room",
+): Promise<{ spaceId: string; code: string }> {
+  const mapId = await getMapIdByName("Virtual Office");
+  const response = await http.post(
+    `${BACKEND_URL}/api/v1/space`,
+    { name, mapId },
+    authHeader(token),
+  );
+  return { spaceId: response.data.spaceId, code: response.data.code };
+}
+
 export async function createRoom(
   token: string,
   name = "Test room",

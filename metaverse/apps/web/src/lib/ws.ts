@@ -54,14 +54,6 @@ export class ArenaSocket {
     this.send({ type: "chat", payload: { text } });
   }
 
-  rtcSignal(to: string, data: unknown) {
-    this.send({ type: "rtc-signal", payload: { to, data } });
-  }
-
-  mediaState(mic: boolean, cam: boolean) {
-    this.send({ type: "media-state", payload: { mic, cam } });
-  }
-
   close() {
     this.ws.onclose = null;
     this.ws.close();

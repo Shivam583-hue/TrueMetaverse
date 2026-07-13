@@ -167,7 +167,7 @@ spaceRouter.delete("/:spaceId", userMiddleware, async (req, res) => {
 spaceRouter.get("/:spaceId", userMiddleware, async (req, res) => {
   const space = await client.space.findUnique({
     where: {
-      id: req.params.spaceId,
+      id: req.params.spaceId as string,
     },
     include: {
       elements: {

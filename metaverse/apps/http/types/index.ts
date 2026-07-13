@@ -41,6 +41,10 @@ export const StudyStartSchema = z.object({
   spaceId: z.string().optional(),
 });
 
+export const LivekitTokenSchema = z.object({
+  spaceId: z.string().min(1),
+});
+
 declare global {
   namespace Express {
     export interface Request {

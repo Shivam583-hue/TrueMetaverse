@@ -1,0 +1,19 @@
+# LiveKit SFU for local development.
+#
+#   docker compose -f metaverse/livekit/docker-compose.yml up -d
+#
+# --dev mode fixes the credentials to devkey/secret, which is what apps/http
+# defaults to (see apps/http/config.ts). Never use --dev in production: set
+# LIVEKIT_URL / LIVEKIT_API_KEY / LIVEKIT_API_SECRET and a real keys: config.
+#
+# Ports (host networking, so they are bound directly on the host):
+#   7880/tcp  signal websocket + HTTP API  -> ws://localhost:7880
+#   7881/tcp  ICE/TCP fallback
+#   7882/udp  WebRTC media (UDP mux)
+services:
+  livekit:
+    image: livekit/livekit-server:v1.9
+    container_name: metaverse-livekit
+    command: --dev --bind 0.0.0.0
+    network_mode: host
+    restart: unless-stopped

@@ -14,7 +14,6 @@ import {
 const MAX_CHAT_LENGTH = 500;
 const CHAT_WINDOW_MS = 10_000;
 const CHAT_MAX_IN_WINDOW = 10;
-const MAX_RTC_SIGNAL_BYTES = 64 * 1024;
 
 type Payload<T extends IncomingMessage["type"]> = Extract<
   IncomingMessage,
@@ -40,8 +39,6 @@ export class User {
   private collision: CollisionData | null = null;
   public x: number;
   public y: number;
-  public mic = false;
-  public cam = false;
   private ws: WebSocket;
   private chatTimestamps: number[] = [];
 
@@ -72,12 +69,6 @@ export class User {
             break;
           case "chat":
             this.handleChat(parsedData.payload);
-            break;
-          case "rtc-signal":
-            this.handleRtcSignal(parsedData.payload);
-            break;
-          case "media-state":
-            this.handleMediaState(parsedData.payload);
             break;
         }
       } catch (err) {
@@ -118,14 +109,8 @@ export class User {
           RoomManager.getInstance()
             .rooms.get(spaceId)
             ?.filter((u) => u.id !== this.id)
-            ?.map((u) => ({
-              id: u.id,
-              userId: u.userId!,
-              x: u.x,
-              y: u.y,
-              mic: u.mic,
-              cam: u.cam,
-            })) ?? [],
+            ?.map((u) => ({ id: u.id, userId: u.userId!, x: u.x, y: u.y })) ??
+          [],
       },
     });
     RoomManager.getInstance().broadcast(
@@ -194,42 +179,6 @@ export class User {
         type: "chat",
         payload: { id: this.id, userId: this.userId, text, at: now },
       },
-      this.spaceId,
-    );
-  }
-
-  private handleRtcSignal(payload: Payload<"rtc-signal">): void {
-    if (!this.userId || !this.spaceId) return;
-    if (typeof payload.to !== "string" || payload.data === undefined) return;
-    if (JSON.stringify(payload.data).length > MAX_RTC_SIGNAL_BYTES) return;
-
-    const target = RoomManager.getInstance()
-      .rooms.get(this.spaceId)
-      ?.find((u) => u.id === payload.to);
-    if (!target || target.id === this.id) return;
-
-    target.send({
-      type: "rtc-signal",
-      payload: { from: this.id, data: payload.data },
-    });
-  }
-
-  private handleMediaState(payload: Payload<"media-state">): void {
-    if (!this.userId || !this.spaceId) return;
-    this.mic = payload.mic === true;
-    this.cam = payload.cam === true;
-
-    RoomManager.getInstance().broadcast(
-      {
-        type: "media-state",
-        payload: {
-          id: this.id,
-          userId: this.userId,
-          mic: this.mic,
-          cam: this.cam,
-        },
-      },
-      this,
       this.spaceId,
     );
   }

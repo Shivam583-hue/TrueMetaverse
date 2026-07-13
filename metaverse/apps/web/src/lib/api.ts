@@ -131,6 +131,12 @@ export const api = {
       `/user/metadata/bulk?ids=[${userIds.join(",")}]`,
     ),
 
+  livekitToken: (spaceId: string) =>
+    request<{ token: string; url: string }>("/livekit/token", {
+      method: "POST",
+      body: JSON.stringify({ spaceId }),
+    }),
+
   study: {
     start: (spaceId?: string) =>
       request<{ sessionId: string; startedAt: string }>("/study/start", {

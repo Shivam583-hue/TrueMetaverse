@@ -1,3 +1,5 @@
+import { isStudyEnabled, isVideoEnabled } from "@repo/types";
+
 export const TILE_SIZE = 32;
 
 export type TileCoord = { x: number; y: number };
@@ -20,6 +22,8 @@ export type SpaceConfig = {
   video?: boolean;
 };
 
+// Rendering config lives here; the study/video capability flags come from
+// @repo/types so the http server authorizes against the same source of truth.
 export const SPACES: Record<string, SpaceConfig> = {
   "garden-library": {
     id: "garden-library",
@@ -28,7 +32,6 @@ export const SPACES: Record<string, SpaceConfig> = {
     tileSize: 40,
     spawnTile: { x: 27, y: 13 },
     zones: [],
-    study: true,
   },
   "multiroom-house": {
     id: "multiroom-house",
@@ -46,16 +49,23 @@ export const SPACES: Record<string, SpaceConfig> = {
     tileSize: 40,
     spawnTile: { x: 19, y: 13 },
     zones: [],
-    video: true,
   },
 };
 
 export const DEFAULT_SPACE_ID = "garden-library";
 
+function withCapabilities(config: SpaceConfig): SpaceConfig {
+  return {
+    ...config,
+    study: isStudyEnabled(config.imagePath),
+    video: isVideoEnabled(config.imagePath),
+  };
+}
+
 export function resolveSpaceConfig(mapImage: string | null): SpaceConfig {
-  if (!mapImage) return SPACES[DEFAULT_SPACE_ID]!;
+  if (!mapImage) return withCapabilities(SPACES[DEFAULT_SPACE_ID]!);
   const known = Object.values(SPACES).find((s) => s.imagePath === mapImage);
-  if (known) return known;
+  if (known) return withCapabilities(known);
   return {
     id: "custom",
     imagePath: mapImage,
