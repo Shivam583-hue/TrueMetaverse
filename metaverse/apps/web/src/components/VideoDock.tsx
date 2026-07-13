@@ -78,12 +78,6 @@ function Placeholder({ meta, name }: { meta?: UserMeta; name: string }) {
   );
 }
 
-// Every peer is audible, whether or not they hold one of the four cards, so
-// their audio plays here rather than off the card's <video> (which stays muted).
-//
-// The track has to be re-attached whenever it changes: a media element only
-// renders the tracks its stream held at the moment it was attached, and a peer's
-// audio track appears later, when they first switch their mic on.
 function PeerAudio({ peer }: { peer: PeerView }) {
   const ref = useRef<HTMLAudioElement>(null);
   const track = peer.stream.getAudioTracks()[0] ?? null;
@@ -97,10 +91,9 @@ function PeerAudio({ peer }: { peer: PeerView }) {
     }
 
     el.srcObject = new MediaStream([track]);
-    const play = () => el.play().catch(() => {});
+    const play = () => el.play().catch(() => { });
     play();
 
-    // Autoplay stays blocked until the tab has seen a gesture.
     window.addEventListener("pointerdown", play);
     window.addEventListener("keydown", play);
     return () => {

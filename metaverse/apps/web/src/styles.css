@@ -888,6 +888,12 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
+.zone-chip {
+  white-space: nowrap;
+  border-color: #3ee6c159;
+  color: var(--portal);
+}
+
 .present-btn.sharing {
   background: #3b1b2ecc;
   border-color: #ff6b8159;

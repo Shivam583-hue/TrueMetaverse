@@ -84,7 +84,6 @@ describe("LiveKit access tokens", () => {
     expect(payload.video.canSubscribe).toBe(true);
     expect(payload.name).toBe(user.username);
     expect(payload.sub.startsWith(`${user.userId}:`)).toBe(true);
-    // The SDK sets nbf/exp (no iat), so the TTL is exp - nbf.
     expect(payload.exp - payload.nbf).toBe(6 * 60 * 60);
   });
 
@@ -95,7 +94,6 @@ describe("LiveKit access tokens", () => {
       authHeader(user.token),
     );
     const payload = decodeJwtPayload(response.data.token);
-    // TrackSource: 1 = camera, 2 = microphone, 3 = screen share.
     expect(payload.video.canPublishSources).toEqual(["camera", "microphone"]);
   });
 

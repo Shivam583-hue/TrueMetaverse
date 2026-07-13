@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import type { ArenaSocket } from "../lib/ws";
@@ -9,7 +9,7 @@ import { useArenaConnection } from "../hooks/useArenaConnection";
 import { useStudyTimer } from "../hooks/useStudyTimer";
 import { useSpaceMusic } from "../hooks/useSpaceMusic";
 import { useVideoChat } from "../hooks/useVideoChat";
-import { usePresentation } from "../hooks/usePresentation";
+import { usePresentation, resolveZone } from "../hooks/usePresentation";
 import SpaceControls from "../components/SpaceControls";
 import WokaPreview from "../components/WokaPreview";
 import LeaderboardDialog from "../components/LeaderboardDialog";
@@ -33,10 +33,16 @@ export default function Arena() {
     socketRef,
     pushMessage: chat.pushMessage,
   });
-  const video = useVideoChat({ enabled: conn.videoEnabled, spaceId });
+  // The room you are standing in is the call you are in.
+  const zone = useMemo(
+    () => resolveZone(conn.spaceConfig, conn.localTile),
+    [conn.spaceConfig, conn.localTile],
+  );
+  const video = useVideoChat({ enabled: conn.videoEnabled, spaceId, zone });
   const presentation = usePresentation({
     config: conn.spaceConfig,
     tile: conn.localTile,
+    zone,
     screenShare: video.screenShare,
   });
 
@@ -48,12 +54,9 @@ export default function Arena() {
   const [copied, setCopied] = useState(false);
   const [watching, setWatching] = useState(false);
 
-  // Typing in the dialog (or just having it open) should not walk the avatar.
   useEffect(() => {
     sceneRef.current?.setKeyboardEnabled(!watching);
   }, [watching]);
-
-  // Nothing to watch once the talk ends.
   useEffect(() => {
     if (!video.screenShare) setWatching(false);
   }, [video.screenShare]);
@@ -188,6 +191,12 @@ export default function Arena() {
               ? "▶ Start studying"
               : `■ Stop · ${formatDuration(timer.elapsed)}`}
           </button>
+        )}
+
+        {presentation.inRoom && (
+          <span className="hud-chip zone-chip">
+            🔈 Presentation room · only people in here can hear you
+          </span>
         )}
 
         {presentation.canShare && (

@@ -22,10 +22,6 @@ export type UserMeta = { username: string | null; appearance: WokaAppearance };
 
 export type ConnectionStatus = "connecting" | "live" | "closed" | "error";
 
-// Owns the live arena session: the websocket, the Phaser game/scene lifecycle,
-// per-user metadata, and the derived UI state (who's online, room info, status).
-// Chat rendering lives elsewhere; this hook just forwards chat/system events to
-// the supplied `pushMessage`.
 export function useArenaConnection({
   spaceId,
   session,
@@ -96,7 +92,7 @@ export function useArenaConnection({
           );
         }
         setMeta(Object.fromEntries(metaRef.current));
-      } catch {}
+      } catch { }
     }
 
     const nameOf = (userId: string) =>

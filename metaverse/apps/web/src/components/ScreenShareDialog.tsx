@@ -1,9 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { ScreenShare } from "../hooks/useVideoChat";
 
-// The projector view. It is a dialog rather than a texture painted onto the
-// screen in the map, because a shared screen is mostly text and the projector is
-// four tiles wide - readable is worth more here than diegetic.
 export default function ScreenShareDialog({
   share,
   onClose,
@@ -16,10 +13,8 @@ export default function ScreenShareDialog({
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    // Re-attach on every new track: an element only renders the tracks its
-    // stream held when it was attached.
     el.srcObject = share.stream;
-    el.play().catch(() => {});
+    el.play().catch(() => { });
   }, [share.stream]);
 
   useEffect(() => {

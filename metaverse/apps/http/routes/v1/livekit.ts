@@ -21,9 +21,6 @@ export const livekitRouter = Router();
 
 const TOKEN_TTL = "6h";
 
-// Everyone may publish their camera and mic. Screen share is deliberately left
-// out: the presentation room's projector takes one presenter at a time, and that
-// is enforced by only granting this source to whoever holds the lectern.
 const DEFAULT_SOURCES = [TrackSource.CAMERA, TrackSource.MICROPHONE];
 const PRESENTER_SOURCES = [...DEFAULT_SOURCES, TrackSource.SCREEN_SHARE];
 
@@ -59,14 +56,15 @@ async function setSources(
       canPublishSources: sources,
       hidden: false,
       recorder: false,
-      canUpdateMetadata: false,
+      // Keep the zone attribute writable; taking the lectern must not cost the
+      // presenter their ability to say which room they are in.
+      canUpdateMetadata: true,
       agent: false,
       canSubscribeMetrics: false,
     },
   });
 }
 
-// Resolves the space for a video request, or writes the error response.
 async function requireVideoSpace(spaceId: string, res: Response) {
   const space = await client.space.findUnique({
     where: { id: spaceId },
@@ -83,8 +81,6 @@ async function requireVideoSpace(spaceId: string, res: Response) {
   return space;
 }
 
-// Mints a LiveKit access token for the caller to join the space's room. The
-// room name is the space id, so each space is its own call.
 livekitRouter.post("/token", userMiddleware, async (req, res) => {
   const parsedData = LivekitTokenSchema.safeParse(req.body ?? {});
   if (!parsedData.success) {
@@ -104,9 +100,6 @@ livekitRouter.post("/token", userMiddleware, async (req, res) => {
     return;
   }
 
-  // One identity per tab, not per user: a user with two tabs open would
-  // otherwise have their older session kicked for a duplicate identity. The
-  // client recovers the user id with identity.split(":")[0] (cuids have no ":").
   const identity = `${req.userId}:${randomUUID().slice(0, 8)}`;
 
   const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
@@ -120,14 +113,14 @@ livekitRouter.post("/token", userMiddleware, async (req, res) => {
     canPublish: true,
     canSubscribe: true,
     canPublishSources: DEFAULT_SOURCES,
+    // Lets the client publish which room of the map it is standing in, which is
+    // what scopes who can hear whom.
+    canUpdateOwnMetadata: true,
   });
 
   res.json({ token: await at.toJwt(), url: LIVEKIT_URL });
 });
 
-// Takes the lectern. The projector seats one presenter, so this succeeds only
-// if nobody else is presenting - and because it works by granting the screen
-// share source, the SFU itself rejects anyone who tries to share without it.
 livekitRouter.post("/present", userMiddleware, async (req, res) => {
   const parsedData = PresentSchema.safeParse(req.body ?? {});
   if (!parsedData.success) {
@@ -136,8 +129,6 @@ livekitRouter.post("/present", userMiddleware, async (req, res) => {
   }
   const { spaceId, identity } = parsedData.data;
 
-  // The identity carries the tab suffix, so check the user owns it rather than
-  // letting anyone claim the lectern on someone else's behalf.
   if (identity.split(":")[0] !== req.userId) {
     res.status(403).json({ message: "Not your session" });
     return;
@@ -170,9 +161,6 @@ livekitRouter.post("/present", userMiddleware, async (req, res) => {
     return;
   }
 
-  // Someone can hold the grant without presenting: they stopped sharing but the
-  // release never landed, or their tab froze. Nobody is on the projector, so
-  // take it from them rather than leaving the room stuck with a dead lock.
   for (const stale of others.filter(holdsPresenterGrant)) {
     await setSources(space.id, stale.identity, DEFAULT_SOURCES);
   }
@@ -181,7 +169,6 @@ livekitRouter.post("/present", userMiddleware, async (req, res) => {
   res.json({ message: "You have the lectern" });
 });
 
-// Gives the lectern back, so the next person can present.
 livekitRouter.post("/present/release", userMiddleware, async (req, res) => {
   const parsedData = PresentSchema.safeParse(req.body ?? {});
   if (!parsedData.success) {
@@ -200,8 +187,6 @@ livekitRouter.post("/present/release", userMiddleware, async (req, res) => {
 
   try {
     await setSources(space.id, identity, DEFAULT_SOURCES);
-  } catch {
-    // Already gone from the room, which releases the lectern anyway.
-  }
+  } catch {}
   res.json({ message: "Lectern released" });
 });

@@ -19,13 +19,20 @@ export type PeerView = {
   speaking: boolean;
   lastSpokeAt: number;
   joinedAt: number;
+  // Which room of the map they are standing in, and whether that is the same one
+  // as us - you are only in a call with the people you share a room with.
+  zone: string;
+  audible: boolean;
 };
 
 type Peer = PeerView;
 
-// Whoever currently holds the projector, and the screen they are sharing. The
-// presenter sees their own share here too, so "watch" shows the same thing to
-// everyone.
+// The open floor is a zone like any other: everyone who is not in a named room
+// is in it together, so "leaving the presentation room" puts you back with
+// everybody else rather than in silence.
+export const OPEN_ZONE = "open";
+const ZONE_ATTRIBUTE = "zone";
+
 export type ScreenShare = {
   identity: string;
   userId: string;
@@ -34,21 +41,18 @@ export type ScreenShare = {
   stream: MediaStream;
 };
 
-// The token identity is `${userId}:${tabSuffix}` so one user can open several
-// tabs without LiveKit kicking the older session for a duplicate identity.
 const userIdOf = (identity: string) => identity.split(":")[0] ?? identity;
 
-// Owns the call for video-enabled spaces: one LiveKit room per space (room name
-// = space id), joined with a token minted by the http server. Mic and cam stay
-// off until the user turns them on, so joining never prompts for permissions.
-// Inert while `enabled` is false: no token is fetched and the SDK is never even
-// downloaded (it is dynamically imported below).
 export function useVideoChat({
   enabled,
   spaceId,
+  zone = OPEN_ZONE,
 }: {
   enabled: boolean;
   spaceId: string | undefined;
+  // The zone the local player is standing in. Everyone in the same zone hears
+  // each other, and nobody else.
+  zone?: string;
 }) {
   const roomRef = useRef<Room | null>(null);
   const peersRef = useRef(new Map<string, Peer>());
@@ -57,6 +61,10 @@ export function useVideoChat({
   const shareBusyRef = useRef(false);
   const spaceIdRef = useRef(spaceId);
   spaceIdRef.current = spaceId;
+  const zoneRef = useRef(zone);
+  zoneRef.current = zone;
+  // Set by the connect effect, so the zone effect below can reach into the room.
+  const applyZoneRef = useRef<(() => void) | null>(null);
 
   const [micOn, setMicOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
@@ -75,9 +83,13 @@ export function useVideoChat({
       setPeers([...peersRef.current.values()].map((p) => ({ ...p })));
     };
 
+    const zoneOf = (participant: Participant) =>
+      participant.attributes?.[ZONE_ATTRIBUTE] || OPEN_ZONE;
+
     const peerOf = (participant: Participant): Peer => {
       const existing = peersRef.current.get(participant.identity);
       if (existing) return existing;
+      const zone = zoneOf(participant);
       const peer: Peer = {
         id: participant.identity,
         userId: userIdOf(participant.identity),
@@ -87,6 +99,8 @@ export function useVideoChat({
         speaking: false,
         lastSpokeAt: 0,
         joinedAt: Date.now(),
+        zone,
+        audible: zone === zoneRef.current,
       };
       peersRef.current.set(participant.identity, peer);
       return peer;
@@ -106,8 +120,6 @@ export function useVideoChat({
       const { Room, RoomEvent, Track } = await import("livekit-client");
       if (cancelled) return;
 
-      // Publication state is the source of truth for mic/cam: a track can be
-      // published but muted, and only an unmuted publication is live.
       const readMediaFlags = (participant: Participant, peer: Peer) => {
         const mic = participant.getTrackPublication(Track.Source.Microphone);
         const cam = participant.getTrackPublication(Track.Source.Camera);
@@ -122,16 +134,52 @@ export function useVideoChat({
         syncPeers();
       };
 
+      // Who is in your call is decided here, and it is enforced by subscription,
+      // not by muting: media from another room never reaches this browser at
+      // all. Called whenever the local player changes room, a peer changes room,
+      // or a peer publishes something new. The room joins with autoSubscribe
+      // off, so nothing is ever heard before this rule is applied to it.
+      const applyZones = () => {
+        const current = room;
+        if (!current) return;
+        const myZone = zoneRef.current;
+
+        for (const p of current.remoteParticipants.values()) {
+          const peer = peerOf(p);
+          peer.zone = zoneOf(p);
+          peer.audible = peer.zone === myZone;
+          // Out of earshot is out of the conversation: their speaking ring would
+          // otherwise flash for a talk you cannot hear.
+          if (!peer.audible) peer.speaking = false;
+
+          for (const pub of p.trackPublications.values()) {
+            pub.setSubscribed(peer.audible);
+          }
+        }
+        syncPeers();
+      };
+      applyZoneRef.current = () => {
+        const current = room;
+        if (!current) return;
+        current.localParticipant
+          .setAttributes({ [ZONE_ATTRIBUTE]: zoneRef.current })
+          .catch((err) => console.error("could not publish zone", err));
+        applyZones();
+      };
+
       room = new Room({ adaptiveStream: true, dynacast: true });
 
       room
         .on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
           readMediaFlags(p, peerOf(p));
-          syncPeers();
+          applyZones();
         })
+        // Somebody walked into or out of a room.
+        .on(RoomEvent.ParticipantAttributesChanged, () => applyZones())
+        // A new mic publication has to be subscribed (or not) by the same rule.
+        .on(RoomEvent.TrackPublished, () => applyZones())
         .on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => {
           peersRef.current.delete(p.identity);
-          // A presenter who walks out (or crashes) frees the projector.
           setScreenShare((prev) =>
             prev?.identity === p.identity ? null : prev,
           );
@@ -144,8 +192,6 @@ export function useVideoChat({
             pub: RemoteTrackPublication,
             p: RemoteParticipant,
           ) => {
-            // A shared screen goes to the projector, not into the peer's card -
-            // otherwise it would replace their face in the dock.
             if (pub.source === Track.Source.ScreenShare) {
               setScreenShare({
                 identity: p.identity,
@@ -188,13 +234,11 @@ export function useVideoChat({
         .on(RoomEvent.TrackUnmuted, (_pub: TrackPublication, p: Participant) =>
           refreshPeer(p),
         )
-        // LiveKit computes audio levels server-side (already smoothed), which
-        // is what ranks the guest slots by who spoke most recently.
         .on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
           const active = new Set(speakers.map((s) => s.identity));
           const now = Date.now();
           for (const peer of peersRef.current.values()) {
-            peer.speaking = active.has(peer.id);
+            peer.speaking = peer.audible && active.has(peer.id);
             if (peer.speaking) peer.lastSpokeAt = now;
           }
           syncPeers();
@@ -236,7 +280,10 @@ export function useVideoChat({
         });
 
       try {
-        await room.connect(url, token);
+        // Nothing is subscribed on arrival: applyZones decides what this
+        // browser is allowed to receive, so audio from another room is never
+        // delivered even for a moment.
+        await room.connect(url, token, { autoSubscribe: false });
       } catch (err) {
         console.error("livekit connect failed", err);
         return;
@@ -248,38 +295,20 @@ export function useVideoChat({
       }
       roomRef.current = room;
 
-      // Seed whoever was already in the room before we joined, including a talk
-      // already in progress.
+      // Register whoever is already here, then publish our zone and subscribe to
+      // the ones we share a room with. Their tracks arrive via TrackSubscribed.
       for (const p of room.remoteParticipants.values()) {
-        const peer = peerOf(p);
-        readMediaFlags(p, peer);
-        for (const pub of p.trackPublications.values()) {
-          if (!pub.track) continue;
-          if (pub.source === Track.Source.ScreenShare) {
-            setScreenShare({
-              identity: p.identity,
-              userId: userIdOf(p.identity),
-              name: p.name || userIdOf(p.identity),
-              isSelf: false,
-              stream: new MediaStream([pub.track.mediaStreamTrack]),
-            });
-            continue;
-          }
-          peer.stream.addTrack(pub.track.mediaStreamTrack);
-        }
+        readMediaFlags(p, peerOf(p));
       }
-      syncPeers();
+      applyZoneRef.current?.();
     })();
 
     return () => {
       cancelled = true;
-      // Hand the lectern back on the way out, so leaving mid-talk does not leave
-      // the projector locked for everyone else.
       const identity = room?.localParticipant?.identity;
       if (identity && room?.localParticipant?.isScreenShareEnabled && spaceId) {
         api.releasePresenter(spaceId, identity).catch(() => {});
       }
-      // Safe mid-connect: this aborts the join.
       room?.disconnect();
       roomRef.current = null;
       peersRef.current.clear();
@@ -292,8 +321,13 @@ export function useVideoChat({
     };
   }, [enabled, spaceId]);
 
-  // setMicrophoneEnabled/setCameraEnabled do the getUserMedia, the publish, and
-  // the device release, so the first toggle is what prompts for permission.
+  // Walking through a door re-publishes the zone and rebuilds the call around
+  // us: entering the presentation room leaves the open floor behind, and
+  // leaving it puts everyone else back.
+  useEffect(() => {
+    applyZoneRef.current?.();
+  }, [zone]);
+
   const toggleDevice = useCallback(async (kind: "mic" | "cam") => {
     const room = roomRef.current;
     if (!room || toggleBusyRef.current) return;
@@ -320,9 +354,6 @@ export function useVideoChat({
   const toggleMic = useCallback(() => toggleDevice("mic"), [toggleDevice]);
   const toggleCam = useCallback(() => toggleDevice("cam"), [toggleDevice]);
 
-  // Taking the lectern is a server call: it is what grants this session the
-  // screen share source, so the SFU rejects anyone who tries to present without
-  // it, and it fails if someone else already has the projector.
   const startScreenShare = useCallback(async () => {
     const room = roomRef.current;
     const space = spaceIdRef.current;
@@ -335,8 +366,6 @@ export function useVideoChat({
       try {
         await room.localParticipant.setScreenShareEnabled(true);
       } catch (err) {
-        // The browser picker was dismissed, or capture failed. Give the lectern
-        // straight back rather than holding it without presenting.
         await api.releasePresenter(space, identity).catch(() => {});
         throw err;
       }
@@ -345,7 +374,7 @@ export function useVideoChat({
         err instanceof ApiError
           ? err.message
           : err instanceof Error && err.name === "NotAllowedError"
-            ? null // the user simply cancelled the picker
+            ? null
             : "Could not start sharing";
       if (message) setShareError(message);
     } finally {
@@ -368,15 +397,19 @@ export function useVideoChat({
     }
   }, []);
 
+  // Only the people you share a room with are in your call at all: the rest are
+  // tracked (so walking back to them is instant) but neither seen nor heard.
+  const audiblePeers = useMemo(() => peers.filter((p) => p.audible), [peers]);
+
   // The three guest slots: most recent speakers first, then join order.
   const slots = useMemo(
     () =>
-      [...peers]
+      [...audiblePeers]
         .sort(
           (a, b) => b.lastSpokeAt - a.lastSpokeAt || a.joinedAt - b.joinedAt,
         )
         .slice(0, 3),
-    [peers],
+    [audiblePeers],
   );
 
   return {
@@ -384,12 +417,13 @@ export function useVideoChat({
     camOn,
     toggleMic,
     toggleCam,
-    peers,
+    peers: audiblePeers,
     slots,
     localStream: localStreamRef,
     screenShare,
     shareError,
     startScreenShare,
     stopScreenShare,
+    zone,
   };
 }

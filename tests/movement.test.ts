@@ -43,10 +43,10 @@ describe("Websocket movement", () => {
   afterAll(() => {
     try {
       s1?.ws.close();
-    } catch {}
+    } catch { }
     try {
       s2?.ws.close();
-    } catch {}
+    } catch { }
   });
 
   test("Joining announces spawn, existing users, and identity", async () => {
@@ -108,8 +108,6 @@ describe("Websocket movement", () => {
       else lastGoodX += 1;
     }
 
-    // A rejection happens either at map collision or at the room boundary, and
-    // it always reports the last valid position rather than advancing.
     expect(rejection).not.toBeNull();
     expect(rejection.payload.x).toBe(lastGoodX);
     expect(rejection.payload.x).toBeGreaterThanOrEqual(0);

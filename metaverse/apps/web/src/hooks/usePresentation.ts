@@ -5,7 +5,21 @@ import {
   type SpaceConfig,
   type TileCoord,
 } from "../game/config/spaces";
-import type { ScreenShare } from "./useVideoChat";
+import { OPEN_ZONE, type ScreenShare } from "./useVideoChat";
+
+// Which audio group a player standing here belongs to: the room they are inside,
+// or the open floor with everybody else. Kept as a plain function because the
+// video hook needs it before the presentation state can be derived.
+export function resolveZone(
+  config: SpaceConfig | null,
+  tile: TileCoord | null,
+): string {
+  const presentation = config?.presentation;
+  if (!presentation || !tile || !config) return OPEN_ZONE;
+  return tileInZone(tile, config, presentation.zone)
+    ? presentation.zone
+    : OPEN_ZONE;
+}
 
 // Turns "where the player is standing" into what the presentation room offers
 // them right now. A space with no presentation config gets nothing, so this is
@@ -13,19 +27,17 @@ import type { ScreenShare } from "./useVideoChat";
 export function usePresentation({
   config,
   tile,
+  zone,
   screenShare,
 }: {
   config: SpaceConfig | null;
   tile: TileCoord | null;
+  zone: string;
   screenShare: ScreenShare | null;
 }) {
   return useMemo(() => {
     const presentation = config?.presentation;
-    const inRoom =
-      !!presentation &&
-      !!tile &&
-      !!config &&
-      tileInZone(tile, config, presentation.zone);
+    const inRoom = !!presentation && zone === presentation.zone;
 
     const atLectern =
       inRoom &&
@@ -47,5 +59,5 @@ export function usePresentation({
       // You are at the lectern but it is taken.
       blockedBy: atLectern && someoneElsePresenting ? screenShare.name : null,
     };
-  }, [config, tile, screenShare]);
+  }, [config, tile, zone, screenShare]);
 }

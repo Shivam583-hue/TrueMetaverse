@@ -5,9 +5,6 @@ import type { WokaAppearance } from "../woka/wokaConfig";
 export type ArenaCallbacks = {
   onSceneReady: () => void;
   onMoveAttempt: (x: number, y: number) => void;
-  // Where the local player actually stands, for room-scoped features. Unlike
-  // onMoveAttempt this also fires on spawn and on a server rollback, so it never
-  // reports a tile the player was bounced out of.
   onLocalTile?: (x: number, y: number) => void;
 };
 
