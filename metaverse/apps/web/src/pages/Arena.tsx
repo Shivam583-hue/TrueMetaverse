@@ -7,6 +7,7 @@ import { formatDuration } from "../lib/format";
 import { useArenaChat } from "../hooks/useArenaChat";
 import { useArenaConnection } from "../hooks/useArenaConnection";
 import { useStudyTimer } from "../hooks/useStudyTimer";
+import { useSpaceMusic } from "../hooks/useSpaceMusic";
 import SpaceControls from "../components/SpaceControls";
 import WokaPreview from "../components/WokaPreview";
 import LeaderboardDialog from "../components/LeaderboardDialog";
@@ -28,7 +29,8 @@ export default function Arena() {
     socketRef,
     pushMessage: chat.pushMessage,
   });
-  const timer = useStudyTimer(spaceId, sceneRef);
+  const timer = useStudyTimer(spaceId, sceneRef, conn.studyEnabled);
+  const music = useSpaceMusic(conn.musicUrl);
 
   const [boardOpen, setBoardOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -48,6 +50,10 @@ export default function Arena() {
   return (
     <div className="arena-wrap">
       <div className="arena-canvas" ref={canvasRef} />
+
+      {conn.musicUrl && (
+        <audio ref={music.audioRef} src={conn.musicUrl} loop preload="auto" />
+      )}
 
       <div className="hud top-left">
         <Link to="/" className="btn ghost" style={{ textDecoration: "none" }}>
@@ -124,21 +130,34 @@ export default function Arena() {
             ))}
           </ul>
         </div>
-        <button className="btn ghost" onClick={() => setBoardOpen(true)}>
-          Ranking board
-        </button>
+        {conn.studyEnabled && (
+          <button className="btn ghost" onClick={() => setBoardOpen(true)}>
+            Ranking board
+          </button>
+        )}
+        {music.hasMusic && (
+          <button
+            className="btn ghost"
+            onClick={music.toggleMute}
+            title={music.muted ? "Unmute music" : "Mute music"}
+          >
+            {music.muted ? "🔇 Muted" : "🔊 Music"}
+          </button>
+        )}
         <SpaceControls />
       </div>
 
       <div className="hud bottom-center">
-        <button
-          className={`btn timer-btn${timer.startedAt !== null ? " running" : ""}`}
-          onClick={timer.toggle}
-        >
-          {timer.startedAt === null
-            ? "▶ Start studying"
-            : `■ Stop · ${formatDuration(timer.elapsed)}`}
-        </button>
+        {conn.studyEnabled && (
+          <button
+            className={`btn timer-btn${timer.startedAt !== null ? " running" : ""}`}
+            onClick={timer.toggle}
+          >
+            {timer.startedAt === null
+              ? "▶ Start studying"
+              : `■ Stop · ${formatDuration(timer.elapsed)}`}
+          </button>
+        )}
         {conn.errorText ? (
           <span className="hud-chip" style={{ color: "var(--alert)" }}>
             {conn.errorText} <Link to="/">Back to rooms</Link>

@@ -4,12 +4,10 @@ import { api } from "../lib/api";
 import { formatDuration } from "../lib/format";
 import type { MultiplayerSpaceScene } from "../game/scenes/MultiplayerSpaceScene";
 
-// Owns the study-session timer: loads any active session on mount, keeps a live
-// elapsed count, mirrors it into the scene's on-avatar label, and stops the
-// session when the arena is left (unmount or the tab going away).
 export function useStudyTimer(
   spaceId: string | undefined,
   sceneRef: RefObject<MultiplayerSpaceScene | null>,
+  enabled: boolean,
 ) {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -17,6 +15,10 @@ export function useStudyTimer(
   startedAtRef.current = startedAt;
 
   useEffect(() => {
+    if (!enabled) {
+      setStartedAt(null);
+      return;
+    }
     let disposed = false;
     api.study
       .me()
@@ -25,7 +27,7 @@ export function useStudyTimer(
           setStartedAt(new Date(res.activeSession.startedAt).getTime());
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     const stopOnLeave = () => {
       if (startedAtRef.current !== null) {
@@ -34,7 +36,7 @@ export function useStudyTimer(
           method: "POST",
           keepalive: true,
           headers: { Authorization: `Bearer ${token}` },
-        }).catch(() => {});
+        }).catch(() => { });
       }
     };
     window.addEventListener("pagehide", stopOnLeave);
@@ -43,7 +45,7 @@ export function useStudyTimer(
       window.removeEventListener("pagehide", stopOnLeave);
       stopOnLeave();
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     if (startedAt === null) {
@@ -67,7 +69,7 @@ export function useStudyTimer(
       setStartedAt(new Date(res.startedAt).getTime());
     } else {
       setStartedAt(null);
-      await api.study.stop().catch(() => {});
+      await api.study.stop().catch(() => { });
     }
   }, [startedAt, spaceId]);
 

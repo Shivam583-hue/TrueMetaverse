@@ -24,7 +24,16 @@ const multiroomHouseMap = {
   mapImage: MULTIROOM_HOUSE_IMAGE,
 };
 
-const templateMaps = [libraryMap, multiroomHouseMap];
+const VIRTUAL_OFFICE_IMAGE = "/assets/spaces/virtual-office/space.png";
+const virtualOfficeMap = {
+  name: "Virtual Office",
+  width: 39,
+  height: 26,
+  thumbnail: VIRTUAL_OFFICE_IMAGE,
+  mapImage: VIRTUAL_OFFICE_IMAGE,
+};
+
+const templateMaps = [libraryMap, multiroomHouseMap, virtualOfficeMap];
 
 const OFFICIAL_CODE = "LIBRARY";
 

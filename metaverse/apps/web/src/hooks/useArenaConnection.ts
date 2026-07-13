@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import type { Session } from "../lib/auth";
 import { ArenaSocket } from "../lib/ws";
 import { createArenaGame } from "../game/main";
+import { resolveSpaceConfig } from "../game/config/spaces";
 import { MultiplayerSpaceScene } from "../game/scenes/MultiplayerSpaceScene";
 import {
   normalizeAppearance,
@@ -40,6 +41,8 @@ export function useArenaConnection({
   const [spaceName, setSpaceName] = useState<string | null>(null);
   const [spaceCode, setSpaceCode] = useState<string | null>(null);
   const [isOfficial, setIsOfficial] = useState(true);
+  const [studyEnabled, setStudyEnabled] = useState(false);
+  const [musicUrl, setMusicUrl] = useState<string | null>(null);
   const [online, setOnline] = useState<Record<string, string>>({});
   const [meta, setMeta] = useState<Record<string, UserMeta>>({});
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
@@ -175,6 +178,10 @@ export function useArenaConnection({
       setSpaceCode(detail.code);
       setIsOfficial(detail.official);
 
+      const config = resolveSpaceConfig(detail.mapImage);
+      setStudyEnabled(config.study === true);
+      setMusicUrl(config.music ?? null);
+
       const scene = new MultiplayerSpaceScene({
         onSceneReady: () => {
           sceneReady = true;
@@ -199,5 +206,15 @@ export function useArenaConnection({
     };
   }, [spaceId, session, canvasRef, sceneRef, socketRef, pushMessage]);
 
-  return { spaceName, spaceCode, isOfficial, online, meta, status, errorText };
+  return {
+    spaceName,
+    spaceCode,
+    isOfficial,
+    studyEnabled,
+    musicUrl,
+    online,
+    meta,
+    status,
+    errorText,
+  };
 }

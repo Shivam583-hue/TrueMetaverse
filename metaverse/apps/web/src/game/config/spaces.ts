@@ -15,6 +15,8 @@ export type SpaceConfig = {
   tileSize: number;
   spawnTile: TileCoord;
   zones: SpaceZone[];
+  study?: boolean;
+  music?: string;
 };
 
 export const SPACES: Record<string, SpaceConfig> = {
@@ -25,6 +27,7 @@ export const SPACES: Record<string, SpaceConfig> = {
     tileSize: 40,
     spawnTile: { x: 27, y: 13 },
     zones: [],
+    study: true,
   },
   "multiroom-house": {
     id: "multiroom-house",
@@ -32,6 +35,15 @@ export const SPACES: Record<string, SpaceConfig> = {
     collisionPath: "/assets/spaces/multiroom-house/collision.json",
     tileSize: 40,
     spawnTile: { x: 13, y: 13 },
+    zones: [],
+    music: "/assets/spaces/multiroom-house/music.mp3",
+  },
+  "virtual-office": {
+    id: "virtual-office",
+    imagePath: "/assets/spaces/virtual-office/space.png",
+    collisionPath: "/assets/spaces/virtual-office/collision.json",
+    tileSize: 40,
+    spawnTile: { x: 19, y: 13 },
     zones: [],
   },
 };

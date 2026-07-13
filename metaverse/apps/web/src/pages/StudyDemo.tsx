@@ -8,7 +8,7 @@ export default function StudyDemo() {
     <div className="arena-wrap">
       <GameCanvas
         playerName={session?.username ?? "Ryuga"}
-        spaceId="multiroom-house"
+        spaceId="virtual-office"
       />
       <div className="hud top-right">
         <SpaceControls />
