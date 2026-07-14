@@ -83,11 +83,27 @@ export default function WhiteboardDialog({
     [isTeacher, publishPending],
   );
 
+  // useEffect(() => {
+  //   closeButtonRef.current?.focus();
+  //   const handleKeyDown = (event: KeyboardEvent) => {
+  //     if (event.key === "Escape") onClose();
+  //   };
+  //   window.addEventListener("keydown", handleKeyDown);
+  //   return () => window.removeEventListener("keydown", handleKeyDown);
+  // }, [onClose]);
+
+
+  //  run  initial dialogue focus only when mounted
   useEffect(() => {
     closeButtonRef.current?.focus();
+  }, []);
+
+  // Escape listener, may depend on onClose
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
