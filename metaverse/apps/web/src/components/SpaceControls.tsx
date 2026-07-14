@@ -4,6 +4,45 @@ import { EventBus, SpaceEvent } from "../game/EventBus";
 import type { Direction } from "../game/systems/GridMovement";
 import { button } from "../lib/ui";
 
+// Browsers suppress the synthesized click while a second finger is already
+// touching the screen, so these fire on pointerdown to stay usable while the
+// joystick is held. Keyboard activation is wired up explicitly in exchange.
+function ZoomButton({
+  label,
+  event,
+  path,
+}: {
+  label: string;
+  event: typeof SpaceEvent.ZoomIn | typeof SpaceEvent.ZoomOut;
+  path: string;
+}) {
+  const activate = () => EventBus.emit(event);
+  return (
+    <button
+      type="button"
+      className={`${button.base} grid h-11 min-h-11 w-11 touch-none place-items-center rounded-lg border-line bg-dusk-raised p-0 text-moonlight active:scale-[0.97] active:translate-y-0`}
+      aria-label={label}
+      title={label}
+      onPointerDown={activate}
+      onKeyDown={(keyEvent) => {
+        if (keyEvent.key !== "Enter" && keyEvent.key !== " ") return;
+        keyEvent.preventDefault();
+        activate();
+      }}
+    >
+      <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4">
+        <path
+          d={path}
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="2"
+        />
+      </svg>
+    </button>
+  );
+}
+
 export default function SpaceControls() {
   return (
     <div
@@ -11,38 +50,16 @@ export default function SpaceControls() {
       aria-label="Map zoom"
       role="group"
     >
-      <button
-        className={`${button.base} grid h-11 min-h-11 w-11 place-items-center rounded-lg border-line bg-dusk-raised p-0 text-moonlight active:scale-[0.97] active:translate-y-0`}
-        aria-label="Zoom out"
-        title="Zoom out"
-        onClick={() => EventBus.emit(SpaceEvent.ZoomOut)}
-      >
-        <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4">
-          <path
-            d="M4 10h12"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="2"
-          />
-        </svg>
-      </button>
-      <button
-        className={`${button.base} grid h-11 min-h-11 w-11 place-items-center rounded-lg border-line bg-dusk-raised p-0 text-moonlight active:scale-[0.97] active:translate-y-0`}
-        aria-label="Zoom in"
-        title="Zoom in"
-        onClick={() => EventBus.emit(SpaceEvent.ZoomIn)}
-      >
-        <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4">
-          <path
-            d="M10 4v12M4 10h12"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="2"
-          />
-        </svg>
-      </button>
+      <ZoomButton
+        label="Zoom out"
+        event={SpaceEvent.ZoomOut}
+        path="M4 10h12"
+      />
+      <ZoomButton
+        label="Zoom in"
+        event={SpaceEvent.ZoomIn}
+        path="M10 4v12M4 10h12"
+      />
     </div>
   );
 }

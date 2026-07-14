@@ -25,7 +25,7 @@ router.post("/signup", async (req, res) => {
       data: {
         username: parsedData.data.username,
         password: hashedPassword,
-        role: parsedData.data.type === "admin" ? "Admin" : "User",
+        role: "User",
       },
     });
     res.json({
@@ -67,6 +67,7 @@ router.post("/signin", async (req, res) => {
         role: user.role,
       },
       JWT_PASSWORD,
+      { expiresIn: "7d" },
     );
 
     res.json({

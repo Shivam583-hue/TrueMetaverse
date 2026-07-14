@@ -18,11 +18,7 @@ export type Session = {
 type AuthContextValue = {
   session: Session | null;
   signin: (username: string, password: string) => Promise<void>;
-  signup: (
-    username: string,
-    password: string,
-    type: "user" | "admin",
-  ) => Promise<void>;
+  signup: (username: string, password: string) => Promise<void>;
   signout: () => void;
 };
 
@@ -38,7 +34,14 @@ function loadSession(): Session | null {
   const username = localStorage.getItem("tm.username");
   if (!token || !username) return null;
   try {
-    return decodeSession(token, username);
+    const session = decodeSession(token, username);
+    const payload = JSON.parse(atob(token.split(".")[1]!)) as { exp?: number };
+    if (payload.exp && payload.exp * 1000 <= Date.now()) {
+      localStorage.removeItem("tm.token");
+      localStorage.removeItem("tm.username");
+      return null;
+    }
+    return session;
   } catch {
     return null;
   }
@@ -55,8 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signup = useCallback(
-    async (username: string, password: string, type: "user" | "admin") => {
-      await api.signup(username, password, type);
+    async (username: string, password: string) => {
+      await api.signup(username, password);
       await signin(username, password);
     },
     [signin],

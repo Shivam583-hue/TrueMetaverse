@@ -23,7 +23,6 @@ export default function Auth({ mode }: { mode: "signin" | "signup" }) {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [asAdmin, setAsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -35,7 +34,7 @@ export default function Auth({ mode }: { mode: "signin" | "signup" }) {
     setBusy(true);
     try {
       if (isSignup) {
-        await signup(username, password, asAdmin ? "admin" : "user");
+        await signup(username, password);
       } else {
         await signin(username, password);
       }
@@ -152,18 +151,6 @@ export default function Auth({ mode }: { mode: "signin" | "signup" }) {
                 required
               />
             </label>
-
-            {isSignup && (
-              <label className="mt-0.5 mb-[22px] flex items-start gap-2 text-sm leading-[1.35] text-[#9da4c6]">
-                <input
-                  className="mt-px h-4 w-4 shrink-0 accent-coin"
-                  type="checkbox"
-                  checked={asAdmin}
-                  onChange={(e) => setAsAdmin(e.target.checked)}
-                />
-                <span>Give this account admin controls</span>
-              </label>
-            )}
 
             {error && (
               <p className={errorClass} role="alert">

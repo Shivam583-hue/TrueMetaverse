@@ -1,0 +1,54 @@
+name: truemetaverse-livekit
+
+services:
+  caddy:
+    image: livekit/caddyl4:latest
+    command: run --config /etc/caddy.yaml --adapter yaml
+    network_mode: host
+    volumes:
+      - ./caddy.yaml:/etc/caddy.yaml:ro,Z
+      - caddy-data:/data
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  livekit:
+    image: livekit/livekit-server:v1.13.3
+    command: --config /etc/livekit.yaml
+    network_mode: host
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:?LIVEKIT_API_KEY is required}: ${LIVEKIT_API_SECRET:?LIVEKIT_API_SECRET is required}"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro,Z
+    depends_on:
+      redis:
+        condition: service_started
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server /etc/redis.conf
+    network_mode: host
+    volumes:
+      - ./redis.conf:/etc/redis.conf:ro,Z
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  caddy-data:
