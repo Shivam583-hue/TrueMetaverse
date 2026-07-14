@@ -1,6 +1,8 @@
 import type { IncomingMessage, OutgoingMessage } from "@repo/types";
 
-const WS_URL = `ws://${location.hostname}:3001`;
+const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+const WS_URL =
+  import.meta.env.VITE_WS_URL ?? `${protocol}//${location.host}/socket`;
 
 export type Handlers = {
   [K in OutgoingMessage["type"]]?: (

@@ -2,11 +2,10 @@
 #
 #   docker compose -f metaverse/livekit/docker-compose.yml up -d
 #
-# Config (including the embedded TURN server) lives in livekit.yaml. The dev
-# credentials there are devkey / devsecretdevsecretdevsecretdevsecret, which is
-# what apps/http defaults to (see apps/http/config.ts). Never ship those: in
-# production set LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET on the http
-# server and give LiveKit real keys.
+# Config (including the embedded TURN server) lives in livekit.yaml. Compose
+# injects devkey / devsecret... through LIVEKIT_KEYS, matching apps/http's local
+# defaults. Never ship those: in production set LIVEKIT_URL, LIVEKIT_API_KEY and
+# LIVEKIT_API_SECRET on the HTTP server and give LiveKit the same real keys.
 #
 # Ports (host networking, so they bind directly on the host):
 #   7880/tcp        signal websocket + HTTP API  -> ws://localhost:7880
@@ -18,6 +17,8 @@ services:
     image: livekit/livekit-server:v1.9
     container_name: metaverse-livekit
     command: --config /etc/livekit/livekit.yaml --bind 0.0.0.0
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecretdevsecretdevsecretdevsecret}"
     volumes:
       - ./livekit.yaml:/etc/livekit/livekit.yaml:ro
     network_mode: host

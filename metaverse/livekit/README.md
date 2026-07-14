@@ -11,7 +11,7 @@ docker compose -f metaverse/livekit/docker-compose.yml up -d
 ```
 
 That serves the signal websocket on `ws://localhost:7880`, which is what `apps/http` points at by default.
-Nothing else needs configuring in dev: the credentials in `livekit.yaml` (`devkey` / `devsecret...`) are the same ones `apps/http/config.ts` falls back to.
+Nothing else needs configuring in dev: Compose injects `devkey` / `devsecret...` through `LIVEKIT_KEYS`, matching the defaults in `apps/http/config.ts`. Override `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` together for any non-local environment.
 
 The full dev stack is postgres (`docker start metaverse-test-db`), this container, and then `bun run dev` in `metaverse/`.
 
@@ -33,7 +33,7 @@ TURN over **TLS** is the variant that actually matters in production, because it
 1. Point a DNS A record at the server, e.g. `turn.<your-domain>`.
 2. Get a certificate for that name (Let's Encrypt) and mount it into the container.
 3. In `livekit.yaml`: uncomment `domain`, `cert_file`, `key_file` and `tls_port`, and set `rtc.use_external_ip: true` so the SFU advertises its public address rather than a NAT one.
-4. Replace the `keys:` block with real credentials. The secret must be at least 32 characters.
+4. Inject real credentials through `LIVEKIT_KEYS` (the Compose files derive it from `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`). The secret must be at least 32 characters.
 5. Open inbound `443` or `7880` (signal), `7881/tcp`, `3478/udp`, `5349/tcp` (TURN/TLS) and the UDP media range.
 6. Set `LIVEKIT_URL` (a `wss://` URL), `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` on the http server.
 

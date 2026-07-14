@@ -1,0 +1,13 @@
+.git
+.gitignore
+.turbo
+**/node_modules
+**/dist
+**/.vite
+packages/db/generated
+.env
+.env.*
+**/*.pem
+livekit/certs
+npm-debug.log*
+yarn-error.log*

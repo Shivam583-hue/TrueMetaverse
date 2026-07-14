@@ -13,7 +13,7 @@ WS_DIR   := $(MV)/apps/ws
 WEB_DIR  := $(MV)/apps/web
 DB_DIR   := $(MV)/packages/db
 
-.PHONY: help run db wait-db install db-push seed setup stop clean
+.PHONY: help run db wait-db install db-push seed setup stop clean docker-config docker-up docker-down docker-logs docker-reset
 
 help:
 	@echo "Metaverse dev stack"
@@ -26,6 +26,13 @@ help:
 	@echo "  make seed     seed the database"
 	@echo "  make stop     stop the postgres container"
 	@echo "  make clean    remove the postgres container"
+	@echo ""
+	@echo "Dockerized stack"
+	@echo "  make docker-config  validate and render the Compose configuration"
+	@echo "  make docker-up      build and start the complete stack"
+	@echo "  make docker-down    stop the stack without deleting database data"
+	@echo "  make docker-logs    follow logs from every service"
+	@echo "  make docker-reset   stop the stack and DELETE its database volume"
 
 run: db
 	@echo ""
@@ -75,3 +82,19 @@ stop:
 
 clean:
 	@docker rm -f $(DB_CONTAINER) >/dev/null 2>&1 && echo "postgres container removed" || echo "no container to remove"
+
+docker-config:
+	docker compose config --quiet
+
+docker-up:
+	docker compose up --build -d
+	@echo "truemetaverse: http://localhost:$${WEB_PORT:-5173}"
+
+docker-down:
+	docker compose down
+
+docker-logs:
+	docker compose logs -f
+
+docker-reset:
+	docker compose down --volumes --remove-orphans

@@ -12,6 +12,7 @@ import { userMiddleware } from "../../middleware/user";
 import {
   LIVEKIT_API_KEY,
   LIVEKIT_API_SECRET,
+  LIVEKIT_INTERNAL_URL,
   LIVEKIT_URL,
   usingDevLivekitKeys,
 } from "../../config";
@@ -32,7 +33,7 @@ if (usingDevLivekitKeys && process.env.NODE_ENV === "production") {
 }
 
 const roomService = new RoomServiceClient(
-  LIVEKIT_URL.replace(/^ws/, "http"),
+  LIVEKIT_INTERNAL_URL.replace(/^ws/, "http"),
   LIVEKIT_API_KEY,
   LIVEKIT_API_SECRET,
 );

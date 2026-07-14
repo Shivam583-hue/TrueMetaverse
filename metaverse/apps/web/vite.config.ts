@@ -51,8 +51,13 @@ function collisionWriter(): Plugin {
 export default defineConfig({
   plugins: [react(), tailwindcss(), collisionWriter()],
   server: {
+    host: "0.0.0.0",
     proxy: {
-      "/api": "http://localhost:3000",
+      "/api": process.env.VITE_API_PROXY_TARGET ?? "http://localhost:3000",
+      "/socket": {
+        target: process.env.VITE_WS_PROXY_TARGET ?? "ws://localhost:3001",
+        ws: true,
+      },
     },
   },
 });

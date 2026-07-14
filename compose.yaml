@@ -1,0 +1,127 @@
+name: truemetaverse
+
+x-app-build: &app-build
+  context: ./metaverse
+  dockerfile: Dockerfile
+
+x-app-environment: &app-environment
+  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-local-postgres-password}@db:5432/${POSTGRES_DB:-truemetaverse}
+  JWT_PASSWORD: ${JWT_PASSWORD:-local-development-jwt-secret-change-me}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-truemetaverse}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-postgres-password}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  migrate:
+    build:
+      <<: *app-build
+      target: http
+    image: truemetaverse-http:local
+    working_dir: /app/packages/db
+    command: ["bunx", "prisma", "migrate", "deploy"]
+    environment: *app-environment
+    depends_on:
+      db:
+        condition: service_healthy
+
+  seed:
+    build:
+      <<: *app-build
+      target: http
+    image: truemetaverse-http:local
+    working_dir: /app/packages/db
+    command: ["bun", "run", "seed.ts"]
+    environment: *app-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  livekit:
+    image: livekit/livekit-server:v1.9
+    command: --config /etc/livekit/livekit.yaml --bind 0.0.0.0
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecretdevsecretdevsecretdevsecret}"
+    volumes:
+      - ./metaverse/livekit/livekit.yaml:/etc/livekit/livekit.yaml:ro
+    network_mode: host
+    restart: unless-stopped
+
+  http:
+    build:
+      <<: *app-build
+      target: http
+    image: truemetaverse-http:local
+    init: true
+    environment:
+      <<: *app-environment
+      NODE_ENV: production
+      PORT: 3000
+      LIVEKIT_URL: ${LIVEKIT_PUBLIC_URL:-ws://localhost:7880}
+      LIVEKIT_INTERNAL_URL: ws://host.docker.internal:7880
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-devsecretdevsecretdevsecretdevsecret}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${HTTP_PORT:-3000}:3000"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      livekit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r=await fetch('http://127.0.0.1:3000/healthz');if(!r.ok)process.exit(1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  ws:
+    build:
+      <<: *app-build
+      target: ws
+    image: truemetaverse-ws:local
+    init: true
+    environment:
+      <<: *app-environment
+      NODE_ENV: production
+      PORT: 3001
+    ports:
+      - "${WS_PORT:-3001}:3001"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  web:
+    build:
+      <<: *app-build
+      target: web
+    image: truemetaverse-web:local
+    ports:
+      - "${WEB_PORT:-5173}:8080"
+    depends_on:
+      http:
+        condition: service_healthy
+      ws:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
