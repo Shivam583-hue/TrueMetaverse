@@ -16,6 +16,9 @@ import LeaderboardDialog from "../components/LeaderboardDialog";
 import VideoDock from "../components/VideoDock";
 import ScreenShareDialog from "../components/ScreenShareDialog";
 import WhiteboardDialog from "../components/WhiteboardDialog";
+import HideSeekHud, {
+  hideSeekMovementBlocked,
+} from "../components/HideSeekHud";
 import { button, cx, hudBaseClass, hudChipClass, inputClass } from "../lib/ui";
 
 const floatingPanelClass =
@@ -59,8 +62,19 @@ export default function Arena() {
   const [copied, setCopied] = useState(false);
   const [watching, setWatching] = useState(false);
 
+  const roundMovementBlocked = hideSeekMovementBlocked(conn.hideSeekState);
   const inputBlocked =
-    watching || whiteboardOpen || rankingOpen || chat.chatOpen;
+    watching ||
+    whiteboardOpen ||
+    rankingOpen ||
+    chat.chatOpen ||
+    roundMovementBlocked;
+  const chatDisabled =
+    !!conn.hideSeekState &&
+    (conn.hideSeekState.phase === "hiding" ||
+      conn.hideSeekState.phase === "seeking") &&
+    (conn.hideSeekState.selfRole !== "hider" ||
+      conn.hideSeekState.selfStatus !== "active");
 
   useEffect(() => {
     sceneRef.current?.setKeyboardEnabled(!inputBlocked);
@@ -79,6 +93,16 @@ export default function Arena() {
   }, [conn.spaceCode]);
 
   const onlineEntries = Object.entries(conn.online);
+  const roundParticipants = useMemo(
+    () =>
+      Object.fromEntries(
+        (conn.hideSeekState?.participants ?? []).map((participant) => [
+          participant.id,
+          participant,
+        ]),
+      ),
+    [conn.hideSeekState],
+  );
 
   return (
     <div className="fixed inset-0 min-w-0 overflow-hidden bg-midnight">
@@ -94,6 +118,18 @@ export default function Arena() {
           selfUserId={session.userId}
           selfUsername={session.username}
           meta={conn.meta}
+        />
+      )}
+
+      {conn.hideSeekEnabled && conn.hideSeekState && (
+        <HideSeekHud
+          state={conn.hideSeekState}
+          error={conn.hideSeekError}
+          localTile={conn.localTile}
+          visibleTiles={conn.visibleTiles}
+          meta={conn.meta}
+          onStart={conn.startHideSeek}
+          onTag={conn.tagHideSeek}
         />
       )}
 
@@ -154,7 +190,13 @@ export default function Arena() {
       <div
         className={`${hudBaseClass} right-3 top-3 max-w-[min(15rem,42vw)] flex-col items-stretch sm:right-4 sm:top-4 sm:max-w-[17rem]`}
       >
-        <div className={`${floatingPanelClass} min-w-0 overflow-hidden`}>
+        <div
+          className={cx(
+            floatingPanelClass,
+            "min-w-0 overflow-hidden",
+            conn.hideSeekEnabled && "hidden lg:block",
+          )}
+        >
           <div className="border-b border-line px-3 py-2 font-pixel text-[0.58rem] uppercase tracking-wide text-fog">
             online · {onlineEntries.length + (conn.status === "live" ? 1 : 0)}
           </div>
@@ -175,6 +217,13 @@ export default function Arena() {
                 {conn.isTeacher && (
                   <span className="shrink-0 rounded bg-coin/15 px-1.5 py-0.5 font-mono text-[0.55rem] uppercase text-coin">
                     Teacher
+                  </span>
+                )}
+                {conn.hideSeekState && (
+                  <span className="shrink-0 rounded bg-[#86b68e22] px-1.5 py-0.5 font-mono text-[0.55rem] uppercase text-[#acd5b2]">
+                    {conn.hideSeekState.selfStatus === "waiting"
+                      ? "ready"
+                      : conn.hideSeekState.selfRole}
                   </span>
                 )}
               </li>
@@ -198,6 +247,15 @@ export default function Arena() {
                 {conn.teacher?.userId === userId && (
                   <span className="shrink-0 rounded bg-coin/15 px-1.5 py-0.5 font-mono text-[0.55rem] uppercase text-coin">
                     Teacher
+                  </span>
+                )}
+                {roundParticipants[sid] && (
+                  <span className="shrink-0 rounded bg-[#86b68e22] px-1.5 py-0.5 font-mono text-[0.55rem] uppercase text-[#acd5b2]">
+                    {roundParticipants[sid]!.status === "waiting"
+                      ? "ready"
+                      : roundParticipants[sid]!.status === "tagged"
+                        ? "tagged"
+                        : roundParticipants[sid]!.role}
                   </span>
                 )}
               </li>
@@ -340,7 +398,11 @@ export default function Arena() {
             >
               {chat.messages.length === 0 ? (
                 <div className="py-3 text-center text-xs leading-relaxed text-fog">
-                  Say hi to the room. Messages are visible to everyone here.
+                  {conn.hideSeekState &&
+                  (conn.hideSeekState.phase === "hiding" ||
+                    conn.hideSeekState.phase === "seeking")
+                    ? "During a round, chat is private to active hiders."
+                    : "Say hi to the room. Messages are visible to everyone here."}
                 </div>
               ) : (
                 chat.messages.map((m) =>
@@ -382,14 +444,20 @@ export default function Arena() {
                 value={chat.chatInput}
                 onChange={(e) => chat.setChatInput(e.target.value)}
                 maxLength={500}
-                placeholder="Message the room..."
-                disabled={conn.status !== "live"}
+                placeholder={
+                  chatDisabled
+                    ? "Chat unavailable while spectating"
+                    : "Message the room..."
+                }
+                disabled={conn.status !== "live" || chatDisabled}
               />
               <button
                 type="submit"
                 className={`${button.primary} min-h-10 px-3`}
                 disabled={
-                  conn.status !== "live" || chat.chatInput.trim().length === 0
+                  conn.status !== "live" ||
+                  chatDisabled ||
+                  chat.chatInput.trim().length === 0
                 }
               >
                 Send

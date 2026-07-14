@@ -2,6 +2,7 @@ import {
   isStudyEnabled,
   isVideoEnabled,
   isWhiteboardEnabled,
+  isHideAndSeekEnabled,
 } from "@repo/types";
 
 export const TILE_SIZE = 32;
@@ -33,6 +34,7 @@ export type SpaceConfig = {
   music?: string;
   video?: boolean;
   whiteboard?: boolean;
+  hideAndSeek?: boolean;
   presentation?: PresentationConfig;
 };
 
@@ -89,14 +91,23 @@ export const SPACES: Record<string, SpaceConfig> = {
       lecternRadius: 1,
     },
   },
-  "classroom": {
+  classroom: {
     id: "classroom",
     imagePath: "/assets/spaces/classroom/classroom.png",
     collisionPath: "/assets/spaces/classroom/collision.json",
     tileSize: 40,
     spawnTile: { x: 19, y: 13 },
     zones: [],
-  }
+  },
+  "hide-and-seek": {
+    id: "hide-and-seek",
+    imagePath: "/assets/spaces/hide-and-seek/space.webp",
+    foregroundPath: "/assets/spaces/hide-and-seek/foreground.webp",
+    collisionPath: "/assets/spaces/hide-and-seek/collision.json",
+    tileSize: 44,
+    spawnTile: { x: 17, y: 13 },
+    zones: [],
+  },
 };
 
 export const DEFAULT_SPACE_ID = "garden-library";
@@ -107,6 +118,7 @@ function withCapabilities(config: SpaceConfig): SpaceConfig {
     study: isStudyEnabled(config.imagePath),
     video: isVideoEnabled(config.imagePath),
     whiteboard: isWhiteboardEnabled(config.imagePath),
+    hideAndSeek: isHideAndSeekEnabled(config.imagePath),
   };
 }
 

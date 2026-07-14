@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { RefObject } from "react";
 import type Phaser from "phaser";
-import type { WhiteboardScene } from "@repo/types";
+import type { HideSeekRoundState, WhiteboardScene } from "@repo/types";
 import { api } from "../lib/api";
 import type { Session } from "../lib/auth";
 import { ArenaSocket } from "../lib/ws";
@@ -47,6 +47,11 @@ export function useArenaConnection({
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [whiteboardEnabled, setWhiteboardEnabled] = useState(false);
+  const [hideSeekEnabled, setHideSeekEnabled] = useState(false);
+  const [hideSeekState, setHideSeekState] = useState<HideSeekRoundState | null>(
+    null,
+  );
+  const [hideSeekError, setHideSeekError] = useState<string | null>(null);
   const [isTeacher, setIsTeacher] = useState(false);
   const [teacher, setTeacher] = useState<{
     userId: string;
@@ -57,6 +62,9 @@ export function useArenaConnection({
   const [spaceConfig, setSpaceConfig] = useState<SpaceConfig | null>(null);
   const [localTile, setLocalTile] = useState<TileCoord | null>(null);
   const [online, setOnline] = useState<Record<string, string>>({});
+  const [visibleTiles, setVisibleTiles] = useState<Record<string, TileCoord>>(
+    {},
+  );
   const [meta, setMeta] = useState<Record<string, UserMeta>>({});
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -101,7 +109,7 @@ export function useArenaConnection({
           );
         }
         setMeta(Object.fromEntries(metaRef.current));
-      } catch { }
+      } catch {}
     }
 
     const nameOf = (userId: string) =>
@@ -115,10 +123,15 @@ export function useArenaConnection({
           setOnline(
             Object.fromEntries(payload.users.map((u) => [u.id, u.userId])),
           );
+          setVisibleTiles(
+            Object.fromEntries(
+              payload.visibleUsers.map((u) => [u.id, { x: u.x, y: u.y }]),
+            ),
+          );
           ensureMeta([session!.userId, ...payload.users.map((u) => u.userId)]);
           withScene((scene) => {
             scene.spawnLocal(payload.spawn.x, payload.spawn.y, session!.userId);
-            for (const u of payload.users)
+            for (const u of payload.visibleUsers)
               scene.addRemote(u.id, u.userId, u.x, u.y);
             for (const [userId, m] of metaRef.current) {
               scene.setUserMeta(userId, m.username, m.appearance);
@@ -127,9 +140,6 @@ export function useArenaConnection({
         },
         "user-joined": (payload) => {
           setOnline((prev) => ({ ...prev, [payload.id]: payload.userId }));
-          withScene((scene) =>
-            scene.addRemote(payload.id, payload.userId, payload.x, payload.y),
-          );
           ensureMeta([payload.userId]).then(() => {
             const m = metaRef.current.get(payload.userId);
             if (m)
@@ -144,14 +154,44 @@ export function useArenaConnection({
             });
           });
         },
-        movement: (payload) =>
+        "player-appeared": (payload) => {
+          setVisibleTiles((previous) => ({
+            ...previous,
+            [payload.id]: { x: payload.x, y: payload.y },
+          }));
+          withScene((scene) =>
+            scene.addRemote(payload.id, payload.userId, payload.x, payload.y),
+          );
+          ensureMeta([payload.userId]);
+        },
+        "player-disappeared": (payload) => {
+          withScene((scene) => scene.removeRemote(payload.id));
+          setVisibleTiles((previous) => {
+            const next = { ...previous };
+            delete next[payload.id];
+            return next;
+          });
+        },
+        "self-position": (payload) =>
+          withScene((scene) => scene.rollbackLocal(payload.x, payload.y)),
+        movement: (payload) => {
+          setVisibleTiles((previous) => ({
+            ...previous,
+            [payload.id]: { x: payload.x, y: payload.y },
+          }));
           withScene((scene) =>
             scene.moveRemote(payload.id, payload.x, payload.y),
-          ),
+          );
+        },
         "movement-rejected": (payload) =>
           withScene((scene) => scene.rollbackLocal(payload.x, payload.y)),
         "user-left": (payload) => {
           withScene((scene) => scene.removeRemote(payload.id));
+          setVisibleTiles((previous) => {
+            const next = { ...previous };
+            delete next[payload.id];
+            return next;
+          });
           pushMessage({
             kind: "system",
             userId: payload.userId,
@@ -173,6 +213,11 @@ export function useArenaConnection({
           });
         },
         "whiteboard-update": (payload) => setWhiteboardScene(payload),
+        "hide-seek-state": (payload) => {
+          setHideSeekState(payload);
+          setHideSeekError(null);
+        },
+        "hide-seek-error": (payload) => setHideSeekError(payload.message),
       },
       () => setStatus("closed"),
     );
@@ -200,6 +245,7 @@ export function useArenaConnection({
         setStudyEnabled(config.study === true);
         setMusicUrl(config.music ?? null);
         setVideoEnabled(config.video === true);
+        setHideSeekEnabled(config.hideAndSeek === true);
         setSpaceConfig(config);
       });
       socket.join(spaceId!, session!.token);
@@ -244,6 +290,19 @@ export function useArenaConnection({
     [socketRef],
   );
 
+  const startHideSeek = useCallback(() => {
+    setHideSeekError(null);
+    socketRef.current?.startHideSeek();
+  }, [socketRef]);
+
+  const tagHideSeek = useCallback(
+    (targetId: string) => {
+      setHideSeekError(null);
+      socketRef.current?.tagHideSeek(targetId);
+    },
+    [socketRef],
+  );
+
   return {
     spaceName,
     spaceCode,
@@ -252,6 +311,11 @@ export function useArenaConnection({
     musicUrl,
     videoEnabled,
     whiteboardEnabled,
+    hideSeekEnabled,
+    hideSeekState,
+    hideSeekError,
+    startHideSeek,
+    tagHideSeek,
     isTeacher,
     teacher,
     whiteboardScene,
@@ -259,6 +323,7 @@ export function useArenaConnection({
     spaceConfig,
     localTile,
     online,
+    visibleTiles,
     meta,
     status,
     errorText,

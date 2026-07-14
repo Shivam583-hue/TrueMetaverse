@@ -63,6 +63,14 @@ export class ArenaSocket {
     });
   }
 
+  startHideSeek() {
+    this.send({ type: "hide-seek-start", payload: {} });
+  }
+
+  tagHideSeek(targetId: string) {
+    this.send({ type: "hide-seek-tag", payload: { targetId } });
+  }
+
   close() {
     this.ws.onclose = null;
     this.ws.close();

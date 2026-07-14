@@ -33,16 +33,31 @@ const virtualOfficeMap = {
   mapImage: VIRTUAL_OFFICE_IMAGE,
 };
 
-const CLASSROOM_IMAGE = "/assets/spaces/classroom/classroom.png"
+const CLASSROOM_IMAGE = "/assets/spaces/classroom/classroom.png";
 const classroomMap = {
   name: "Classroom",
   width: 37,
   height: 28,
   thumbnail: CLASSROOM_IMAGE,
   mapImage: CLASSROOM_IMAGE,
-}
+};
 
-const templateMaps = [libraryMap, multiroomHouseMap, virtualOfficeMap, classroomMap];
+const HIDE_AND_SEEK_IMAGE = "/assets/spaces/hide-and-seek/space.webp";
+const hideAndSeekMap = {
+  name: "Enchanted Forest Hide & Seek",
+  width: 57,
+  height: 57,
+  thumbnail: HIDE_AND_SEEK_IMAGE,
+  mapImage: HIDE_AND_SEEK_IMAGE,
+};
+
+const templateMaps = [
+  libraryMap,
+  multiroomHouseMap,
+  virtualOfficeMap,
+  classroomMap,
+  hideAndSeekMap,
+];
 
 const OFFICIAL_CODE = "LIBRARY";
 
@@ -63,9 +78,9 @@ async function main() {
     });
     const map = existing
       ? await client.map.update({
-        where: { id: existing.id },
-        data: template,
-      })
+          where: { id: existing.id },
+          data: template,
+        })
       : await client.map.create({ data: template });
     console.log(`map ${existing ? "updated" : "created"}: ${map.name}`);
     maps.set(template.name, map);

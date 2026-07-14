@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "mode": "hide-and-seek",
+  "grid": { "cols": 57, "rows": 57 },
+  "seekerSpawn": { "x": 17, "y": 13 },
+  "hiderSpawns": [
+    { "x": 14, "y": 15 },
+    { "x": 22, "y": 15 },
+    { "x": 10, "y": 23 },
+    { "x": 10, "y": 33 },
+    { "x": 9, "y": 37 },
+    { "x": 21, "y": 33 },
+    { "x": 29, "y": 39 },
+    { "x": 37, "y": 38 },
+    { "x": 43, "y": 31 },
+    { "x": 44, "y": 18 },
+    { "x": 47, "y": 24 },
+    { "x": 31, "y": 45 }
+  ],
+  "concealment": [
+    { "id": "willow-grove", "rect": { "x": 17, "y": 18, "w": 7, "h": 3 } },
+    { "id": "western-thicket", "rect": { "x": 6, "y": 21, "w": 6, "h": 5 } },
+    { "id": "river-canopy", "rect": { "x": 27, "y": 31, "w": 7, "h": 5 } },
+    { "id": "eastern-grove", "rect": { "x": 40, "y": 33, "w": 7, "h": 5 } },
+    { "id": "southern-thicket", "rect": { "x": 28, "y": 40, "w": 9, "h": 6 } },
+    { "id": "ancient-tree", "rect": { "x": 23, "y": 47, "w": 7, "h": 5 } }
+  ],
+  "settings": {
+    "hideDurationMs": 30000,
+    "seekDurationMs": 180000,
+    "resultsDurationMs": 10000,
+    "sightRadius": 7,
+    "concealRevealRadius": 2,
+    "tagRange": 1,
+    "minPlayers": 3,
+    "maxPlayers": 12
+  }
+}

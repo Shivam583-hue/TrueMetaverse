@@ -1,6 +1,7 @@
 import { WebSocket } from "ws";
 import { RoomManager } from "./RoomManager";
 import {
+  isHideAndSeekEnabled,
   isWhiteboardEnabled,
   type IncomingMessage,
   type OutgoingMessage,
@@ -14,6 +15,7 @@ import {
   loadCollision,
   type CollisionData,
 } from "./collision";
+import { loadHideSeekConfig } from "./hideSeekConfig";
 
 const MAX_CHAT_LENGTH = 500;
 const CHAT_WINDOW_MS = 10_000;
@@ -50,6 +52,10 @@ export class User {
   private ws: WebSocket;
   private chatTimestamps: number[] = [];
 
+  public get joinedSpaceId(): string | undefined {
+    return this.spaceId;
+  }
+
   constructor(ws: WebSocket) {
     this.id = getRandomString(10);
     this.x = 0;
@@ -81,6 +87,12 @@ export class User {
           case "whiteboard-update":
             this.handleWhiteboardUpdate(parsedData.payload);
             break;
+          case "hide-seek-start":
+            this.handleHideSeekStart();
+            break;
+          case "hide-seek-tag":
+            this.handleHideSeekTag(parsedData.payload);
+            break;
         }
       } catch (err) {
         console.error("Failed to handle ws message", err);
@@ -89,6 +101,7 @@ export class User {
   }
 
   private async handleJoin(payload: Payload<"join">): Promise<void> {
+    if (this.spaceId) return;
     const { spaceId, token } = payload;
     const userId = (jwt.verify(token, JWT_PASSWORD) as JwtPayload).userId;
     if (!userId) {
@@ -110,38 +123,51 @@ export class User {
     this.canEditWhiteboard =
       this.whiteboardEnabled && space.creatorId === this.userId;
 
-    RoomManager.getInstance().addUser(spaceId, this);
     const spawn = centerSpawn(this.collision, space.width, space.height);
     this.x = spawn.x;
     this.y = spawn.y;
+    const hideSeekEnabled = isHideAndSeekEnabled(space.mapImage);
+    const hideSeekConfig = hideSeekEnabled
+      ? loadHideSeekConfig(space.mapImage)
+      : null;
+    if (
+      hideSeekEnabled &&
+      (!hideSeekConfig ||
+        !this.collision ||
+        hideSeekConfig.grid.cols !== space.width ||
+        hideSeekConfig.grid.rows !== space.height ||
+        this.collision.cols !== space.width ||
+        this.collision.rows !== space.height)
+    ) {
+      console.error(`Invalid hide-and-seek assets for space ${spaceId}`);
+      this.spaceId = undefined;
+      this.ws.close();
+      return;
+    }
+    RoomManager.getInstance().addUser(spaceId, this, {
+      hideSeekConfig,
+      collision: this.collision,
+      creatorId: space.creatorId,
+    });
 
     this.send({
       type: "space-joined",
       payload: {
         spawn: { x: this.x, y: this.y },
-        users:
-          RoomManager.getInstance()
-            .rooms.get(spaceId)
-            ?.filter((u) => u.id !== this.id)
-            ?.map((u) => ({ id: u.id, userId: u.userId!, x: u.x, y: u.y })) ??
-          [],
+        users: RoomManager.getInstance().getPresence(spaceId, this.id),
+        visibleUsers: RoomManager.getInstance().getVisibleUsers(spaceId, this),
         whiteboard: this.whiteboardEnabled
           ? RoomManager.getInstance().getWhiteboard(spaceId)
           : null,
       },
     });
-    RoomManager.getInstance().broadcast(
-      {
-        type: "user-joined",
-        payload: { id: this.id, userId: this.userId!, x: this.x, y: this.y },
-      },
-      this,
-      this.spaceId!,
-    );
+    RoomManager.getInstance().announceJoined(this, spaceId);
   }
 
   private handleMove(payload: Payload<"move">): void {
+    if (!this.spaceId) return;
     const { x: moveX, y: moveY } = payload;
+    if (!Number.isInteger(moveX) || !Number.isInteger(moveY)) return;
     const xDisplacement = Math.abs(this.x - moveX);
     const yDisplacement = Math.abs(this.y - moveY);
     const insideBounds =
@@ -157,18 +183,12 @@ export class User {
     if (
       insideBounds &&
       isSingleStep &&
+      RoomManager.getInstance().canMove(this, this.spaceId) &&
       !isBlocked(this.collision, moveX, moveY)
     ) {
       this.x = moveX;
       this.y = moveY;
-      RoomManager.getInstance().broadcast(
-        {
-          type: "movement",
-          payload: { id: this.id, userId: this.userId!, x: this.x, y: this.y },
-        },
-        this,
-        this.spaceId!,
-      );
+      RoomManager.getInstance().publishMovement(this, this.spaceId);
       return;
     }
 
@@ -191,18 +211,24 @@ export class User {
     if (this.chatTimestamps.length >= CHAT_MAX_IN_WINDOW) return;
     this.chatTimestamps.push(now);
 
-    RoomManager.getInstance().broadcastAll(
-      {
-        type: "chat",
-        payload: { id: this.id, userId: this.userId, text, at: now },
-      },
+    RoomManager.getInstance().broadcastChat(
+      { id: this.id, userId: this.userId, text, at: now },
+      this,
       this.spaceId,
     );
   }
 
-  private handleWhiteboardUpdate(
-    payload: Payload<"whiteboard-update">,
-  ): void {
+  private handleHideSeekStart(): void {
+    if (!this.spaceId) return;
+    RoomManager.getInstance().startHideSeek(this, this.spaceId);
+  }
+
+  private handleHideSeekTag(payload: Payload<"hide-seek-tag">): void {
+    if (!this.spaceId || typeof payload.targetId !== "string") return;
+    RoomManager.getInstance().tagHideSeek(this, this.spaceId, payload.targetId);
+  }
+
+  private handleWhiteboardUpdate(payload: Payload<"whiteboard-update">): void {
     if (!this.spaceId || !this.canEditWhiteboard) return;
     if (
       !Array.isArray(payload.elements) ||
@@ -233,21 +259,13 @@ export class User {
 
   destroy() {
     if (!this.spaceId || !this.userId) return;
-    RoomManager.getInstance().broadcast(
-      {
-        type: "user-left",
-        payload: {
-          id: this.id,
-          userId: this.userId!,
-        },
-      },
-      this,
-      this.spaceId!,
-    );
-    RoomManager.getInstance().removeUser(this, this.spaceId!);
+    RoomManager.getInstance().removeUser(this, this.spaceId);
+    this.spaceId = undefined;
   }
 
   send(payload: OutgoingMessage) {
-    this.ws.send(JSON.stringify(payload));
+    if (this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(payload));
+    }
   }
 }

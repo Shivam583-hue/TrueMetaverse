@@ -2,6 +2,10 @@
   "name": "@repo/ws",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/jsonwebtoken": "^9.0.7",
