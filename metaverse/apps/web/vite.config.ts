@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 function collisionWriter(): Plugin {
   return {
@@ -48,7 +49,7 @@ function collisionWriter(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), collisionWriter()],
+  plugins: [react(), tailwindcss(), collisionWriter()],
   server: {
     proxy: {
       "/api": "http://localhost:3000",

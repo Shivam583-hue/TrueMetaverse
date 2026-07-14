@@ -39,7 +39,7 @@ export default function App() {
         path="/space/:spaceId"
         element={
           <RequireAuth>
-            <Suspense fallback={<div className="arena-wrap" />}>
+            <Suspense fallback={<div className="fixed inset-0 bg-midnight" />}>
               <Arena />
             </Suspense>
           </RequireAuth>
@@ -48,7 +48,7 @@ export default function App() {
       <Route
         path="/study-demo"
         element={
-          <Suspense fallback={<div className="arena-wrap" />}>
+          <Suspense fallback={<div className="fixed inset-0 bg-midnight" />}>
             <StudyDemo />
           </Suspense>
         }

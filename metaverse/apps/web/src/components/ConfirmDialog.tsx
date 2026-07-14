@@ -1,5 +1,13 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+import {
+  button,
+  cx,
+  errorClass,
+  modalActionsClass,
+  modalBackdropClass,
+  modalPanelClass,
+} from "../lib/ui";
 
 export default function ConfirmDialog({
   title,
@@ -42,37 +50,48 @@ export default function ConfirmDialog({
 
   return (
     <div
-      className="modal-backdrop"
+      className={modalBackdropClass}
       onClick={() => !busy && onCancel()}
       role="presentation"
     >
       <div
-        className={`card modal confirm${danger ? " danger" : ""}`}
+        className={cx(
+          modalPanelClass,
+          "max-w-[420px] border-alert/25",
+          danger && "border-alert/40",
+        )}
         onClick={(e) => e.stopPropagation()}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
       >
-        <div className="confirm-head">
-          <span className="confirm-icon" aria-hidden="true">
+        <div className="mb-4 flex items-center gap-3">
+          <span
+            className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full border border-alert/35 bg-alert/10 font-pixel text-xs text-alert"
+            aria-hidden="true"
+          >
             {danger ? "!" : "?"}
           </span>
-          <h2 id="confirm-title">{title}</h2>
+          <h2 id="confirm-title" className="font-pixel text-[0.95rem]">
+            {title}
+          </h2>
         </div>
 
-        <div className="confirm-body">{children}</div>
+        <div className="[&_p]:m-0 [&_p]:text-sm [&_p]:leading-6 [&_p]:text-fog">
+          {children}
+        </div>
 
         {error && (
-          <p className="error" role="alert">
+          <p className={errorClass} role="alert">
             {error}
           </p>
         )}
 
-        <div className="modal-actions">
+        <div className={modalActionsClass}>
           <button
             ref={cancelRef}
             type="button"
-            className="btn ghost"
+            className={button.ghost}
             onClick={onCancel}
             disabled={busy}
           >
@@ -81,7 +100,7 @@ export default function ConfirmDialog({
           <button
             ref={confirmRef}
             type="button"
-            className={`btn ${danger ? "danger solid" : "primary"}`}
+            className={danger ? button.dangerSolid : button.primary}
             onClick={onConfirm}
             disabled={busy}
           >

@@ -16,6 +16,10 @@ import LeaderboardDialog from "../components/LeaderboardDialog";
 import VideoDock from "../components/VideoDock";
 import ScreenShareDialog from "../components/ScreenShareDialog";
 import WhiteboardDialog from "../components/WhiteboardDialog";
+import { button, cx, hudBaseClass, hudChipClass, inputClass } from "../lib/ui";
+
+const floatingPanelClass =
+  "rounded-xl border border-line bg-[#111326e8] shadow-[0_12px_34px_#05061188] backdrop-blur-md";
 
 export default function Arena() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -74,7 +78,7 @@ export default function Arena() {
   const onlineEntries = Object.entries(conn.online);
 
   return (
-    <div className="arena-wrap">
+    <div className="fixed inset-0 min-w-0 overflow-hidden bg-midnight">
       <div className="arena-canvas" ref={canvasRef} />
 
       {conn.musicUrl && (
@@ -90,15 +94,19 @@ export default function Arena() {
         />
       )}
 
-      <div className="hud top-left">
-        <Link to="/" className="btn ghost" style={{ textDecoration: "none" }}>
+      <div
+        className={`${hudBaseClass} left-3 top-3 max-w-[calc(100vw-6rem)] flex-wrap sm:left-4 sm:top-4 sm:max-w-[calc(100vw-18rem)]`}
+      >
+        <Link to="/" className={`${button.ghost} min-h-9 bg-midnight/75 px-3`}>
           ← Leave
         </Link>
-        <span className="hud-chip">{conn.spaceName ?? "..."}</span>
+        <span className={`${hudChipClass} max-w-[min(14rem,50vw)] truncate`}>
+          {conn.spaceName ?? "..."}
+        </span>
         {!conn.isOfficial && conn.spaceCode && (
-          <div className="invite">
+          <div className="relative">
             <button
-              className="btn ghost"
+              className={`${button.ghost} min-h-9 bg-midnight/75 px-3`}
               onClick={() => {
                 setCopied(false);
                 setInviteOpen((v) => !v);
@@ -107,13 +115,22 @@ export default function Arena() {
               Invite
             </button>
             {inviteOpen && (
-              <div className="invite-pop">
-                <div className="invite-label">Room code</div>
-                <div className="invite-code">{conn.spaceCode}</div>
-                <p className="invite-hint">
+              <div
+                className={`${floatingPanelClass} absolute left-0 top-[calc(100%+0.5rem)] w-[min(18rem,calc(100vw-1.5rem))] p-4`}
+              >
+                <div className="font-pixel text-[0.6rem] uppercase tracking-wider text-fog">
+                  Room code
+                </div>
+                <div className="my-3 break-all rounded-lg border border-line-strong bg-midnight px-3 py-2 text-center font-mono text-lg font-bold tracking-[0.18em] text-coin">
+                  {conn.spaceCode}
+                </div>
+                <p className="text-sm leading-relaxed text-fog">
                   Share this code so others can join your room.
                 </p>
-                <button className="btn primary invite-copy" onClick={copyCode}>
+                <button
+                  className={`${button.primary} mt-3 w-full`}
+                  onClick={copyCode}
+                >
                   {copied ? "Copied ✓" : "Copy code"}
                 </button>
               </div>
@@ -121,7 +138,7 @@ export default function Arena() {
           </div>
         )}
         {conn.status !== "live" && (
-          <span className="hud-chip mono">
+          <span className={`${hudChipClass} font-mono text-xs`}>
             {conn.status === "connecting"
               ? "connecting..."
               : conn.status === "closed"
@@ -131,45 +148,54 @@ export default function Arena() {
         )}
       </div>
 
-      <div className="hud top-right">
-        <div className="online-list">
-          <div className="title">
+      <div
+        className={`${hudBaseClass} right-3 top-3 max-w-[min(15rem,42vw)] flex-col items-stretch sm:right-4 sm:top-4 sm:max-w-[17rem]`}
+      >
+        <div className={`${floatingPanelClass} min-w-0 overflow-hidden`}>
+          <div className="border-b border-line px-3 py-2 font-pixel text-[0.58rem] uppercase tracking-wide text-fog">
             online · {onlineEntries.length + (conn.status === "live" ? 1 : 0)}
           </div>
-          <ul>
+          <ul className="max-h-36 overflow-y-auto px-2 py-1.5">
             {conn.status === "live" && (
-              <li>
-                <span className="online-dot" />
+              <li className="flex min-w-0 items-center gap-2 rounded-md px-1.5 py-1 text-xs text-[#d9dced]">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-portal shadow-[0_0_7px_var(--color-portal)]" />
                 {conn.meta[session!.userId] && (
                   <WokaPreview
                     appearance={conn.meta[session!.userId]!.appearance}
                     scale={1}
-                    className="online-woka"
+                    className="h-6 w-4 shrink-0 pixelated"
                   />
                 )}
-                <span className="online-name">
+                <span className="min-w-0 flex-1 truncate">
                   {session?.username} (you)
                 </span>
                 {conn.isTeacher && (
-                  <span className="teacher-badge">Teacher</span>
+                  <span className="shrink-0 rounded bg-coin/15 px-1.5 py-0.5 font-mono text-[0.55rem] uppercase text-coin">
+                    Teacher
+                  </span>
                 )}
               </li>
             )}
             {onlineEntries.map(([sid, userId]) => (
-              <li key={sid}>
-                <span className="online-dot" />
+              <li
+                key={sid}
+                className="flex min-w-0 items-center gap-2 rounded-md px-1.5 py-1 text-xs text-[#d9dced]"
+              >
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-portal shadow-[0_0_7px_var(--color-portal)]" />
                 {conn.meta[userId] && (
                   <WokaPreview
                     appearance={conn.meta[userId]!.appearance}
                     scale={1}
-                    className="online-woka"
+                    className="h-6 w-4 shrink-0 pixelated"
                   />
                 )}
-                <span className="online-name">
+                <span className="min-w-0 flex-1 truncate">
                   {conn.meta[userId]?.username ?? userId.slice(0, 8)}
                 </span>
                 {conn.teacher?.userId === userId && (
-                  <span className="teacher-badge">Teacher</span>
+                  <span className="shrink-0 rounded bg-coin/15 px-1.5 py-0.5 font-mono text-[0.55rem] uppercase text-coin">
+                    Teacher
+                  </span>
                 )}
               </li>
             ))}
@@ -177,23 +203,26 @@ export default function Arena() {
         </div>
         {conn.whiteboardEnabled && (
           <button
-            className="btn primary whiteboard-trigger"
+            className={`${button.primary} min-w-0 px-3 text-xs sm:text-sm`}
             onClick={() => setWhiteboardOpen(true)}
           >
-            <span className="whiteboard-trigger-icon" aria-hidden="true">
+            <span className="text-base" aria-hidden="true">
               ✎
             </span>
             Open whiteboard
           </button>
         )}
         {conn.studyEnabled && (
-          <button className="btn ghost" onClick={() => setRankingOpen(true)}>
+          <button
+            className={`${button.ghost} bg-midnight/75 px-3 text-xs sm:text-sm`}
+            onClick={() => setRankingOpen(true)}
+          >
             Ranking board
           </button>
         )}
         {music.hasMusic && (
           <button
-            className="btn ghost"
+            className={`${button.ghost} bg-midnight/75 px-3 text-xs sm:text-sm`}
             onClick={music.toggleMute}
             title={music.muted ? "Unmute music" : "Mute music"}
           >
@@ -203,10 +232,17 @@ export default function Arena() {
         <SpaceControls />
       </div>
 
-      <div className="hud bottom-center">
+      <div
+        className={`${hudBaseClass} bottom-3 left-1/2 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 flex-wrap justify-center sm:bottom-4`}
+      >
         {conn.studyEnabled && (
           <button
-            className={`btn timer-btn${timer.startedAt !== null ? " running" : ""}`}
+            className={cx(
+              button.ghost,
+              "bg-midnight/85 px-3 text-xs sm:text-sm",
+              timer.startedAt !== null &&
+                "border-alert bg-alert/15 text-[#ff9aaa]",
+            )}
             onClick={timer.toggle}
           >
             {timer.startedAt === null
@@ -216,14 +252,14 @@ export default function Arena() {
         )}
 
         {presentation.inRoom && (
-          <span className="hud-chip zone-chip">
+          <span className={`${hudChipClass} text-center text-xs sm:text-sm`}>
             🔈 Presentation room · only people in here can hear you
           </span>
         )}
 
         {presentation.canShare && (
           <button
-            className="btn primary present-btn"
+            className={`${button.primary} px-3 text-xs sm:text-sm`}
             onClick={video.startScreenShare}
           >
             ⧉ Share your screen
@@ -231,7 +267,7 @@ export default function Arena() {
         )}
         {presentation.canStopSharing && (
           <button
-            className="btn present-btn sharing"
+            className={`${button.dangerSolid} px-3 text-xs sm:text-sm`}
             onClick={video.stopScreenShare}
           >
             ■ Stop sharing
@@ -239,7 +275,7 @@ export default function Arena() {
         )}
         {presentation.canWatch && !watching && (
           <button
-            className="btn ghost present-btn"
+            className={`${button.ghost} bg-midnight/85 px-3 text-xs sm:text-sm`}
             onClick={() => setWatching(true)}
           >
             ▶ Watch{" "}
@@ -249,66 +285,90 @@ export default function Arena() {
           </button>
         )}
         {presentation.blockedBy && (
-          <span className="hud-chip">
+          <span className={`${hudChipClass} text-xs sm:text-sm`}>
             {presentation.blockedBy} is using the projector
           </span>
         )}
         {video.shareError && (
-          <span className="hud-chip" style={{ color: "var(--alert)" }}>
+          <span className={`${hudChipClass} text-alert`}>
             {video.shareError}
           </span>
         )}
         {conn.errorText ? (
-          <span className="hud-chip" style={{ color: "var(--alert)" }}>
+          <span className={`${hudChipClass} text-alert`}>
             {conn.errorText} <Link to="/">Back to rooms</Link>
           </span>
         ) : (
-          <span className="hud-chip mono">arrow keys / wasd to move</span>
+          <span className={`${hudChipClass} font-mono text-[0.65rem]`}>
+            arrow keys / wasd to move
+          </span>
         )}
       </div>
 
-      <div className={`hud bottom-left chat${chat.chatOpen ? " open" : ""}`}>
+      <div
+        className={cx(
+          hudBaseClass,
+          floatingPanelClass,
+          "bottom-3 left-3 w-[min(23rem,calc(100vw-1.5rem))] flex-col items-stretch overflow-hidden sm:bottom-4 sm:left-4",
+        )}
+      >
         <button
-          className="chat-toggle"
+          className="flex min-h-10 w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-moonlight hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-portal"
           onClick={() => chat.setChatOpen((v) => !v)}
           title={chat.chatOpen ? "Hide chat" : "Show chat"}
         >
-          <span className="chat-toggle-label">chat</span>
-          <span className="chat-toggle-caret">{chat.chatOpen ? "▾" : "▴"}</span>
+          <span>chat</span>
+          <span className="font-mono text-fog">
+            {chat.chatOpen ? "▾" : "▴"}
+          </span>
         </button>
         {chat.chatOpen && (
           <>
-            <div className="chat-log" ref={chat.chatLogRef}>
+            <div
+              className="max-h-48 min-h-20 space-y-2 overflow-y-auto border-t border-line px-3 py-3 text-sm"
+              ref={chat.chatLogRef}
+            >
               {chat.messages.length === 0 ? (
-                <div className="chat-empty">
+                <div className="py-3 text-center text-xs leading-relaxed text-fog">
                   Say hi to the room. Messages are visible to everyone here.
                 </div>
               ) : (
                 chat.messages.map((m) =>
                   m.kind === "system" ? (
-                    <div key={m.key} className="chat-msg system">
+                    <div
+                      key={m.key}
+                      className="font-mono text-[0.67rem] italic text-fog"
+                    >
                       {m.text}
                     </div>
                   ) : (
-                    <div key={m.key} className="chat-msg">
+                    <div key={m.key} className="flex min-w-0 gap-2">
                       <span
-                        className={`chat-author${m.userId === session!.userId ? " me" : ""}`}
+                        className={cx(
+                          "max-w-24 shrink-0 truncate font-semibold text-[#8fa5ff]",
+                          m.userId === session!.userId && "text-portal",
+                        )}
                       >
                         {m.userId === session!.userId
                           ? "you"
                           : (conn.meta[m.userId]?.username ??
                             m.userId.slice(0, 8))}
                       </span>
-                      <span className="chat-text">{m.text}</span>
+                      <span className="min-w-0 break-words text-[#d9dced] [overflow-wrap:anywhere]">
+                        {m.text}
+                      </span>
                     </div>
                   ),
                 )
               )}
             </div>
-            <form className="chat-input-row" onSubmit={chat.sendChat}>
+            <form
+              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2 border-t border-line p-2.5"
+              onSubmit={chat.sendChat}
+            >
               <input
                 ref={chat.chatInputRef}
-                className="chat-input"
+                className={`${inputClass} min-h-10 py-1.5`}
                 value={chat.chatInput}
                 onChange={(e) => chat.setChatInput(e.target.value)}
                 maxLength={500}
@@ -317,7 +377,7 @@ export default function Arena() {
               />
               <button
                 type="submit"
-                className="btn primary chat-send"
+                className={`${button.primary} min-h-10 px-3`}
                 disabled={
                   conn.status !== "live" || chat.chatInput.trim().length === 0
                 }

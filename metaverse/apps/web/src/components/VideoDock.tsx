@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { UserMeta } from "../hooks/useArenaConnection";
 import type { PeerView, useVideoChat } from "../hooks/useVideoChat";
 import WokaPreview from "./WokaPreview";
+import { cx, hudBaseClass } from "../lib/ui";
 
 type VideoChat = ReturnType<typeof useVideoChat>;
 
@@ -66,13 +67,15 @@ function CamIcon({ off = false }: { off?: boolean }) {
 
 function Placeholder({ meta, name }: { meta?: UserMeta; name: string }) {
   return (
-    <div className="video-placeholder">
+    <div className="flex h-full items-center justify-center bg-[radial-gradient(ellipse_120%_90%_at_50%_30%,var(--color-dusk-raised),var(--color-midnight)_82%)] pb-3.5">
       {meta ? (
-        <span className="video-woka">
+        <span className="video-woka-art relative flex">
           <WokaPreview appearance={meta.appearance} scale={2} />
         </span>
       ) : (
-        <span className="video-initial">{name.charAt(0).toUpperCase()}</span>
+        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-line-strong bg-dusk-raised font-pixel text-sm text-portal">
+          {name.charAt(0).toUpperCase()}
+        </span>
       )}
     </div>
   );
@@ -91,7 +94,7 @@ function PeerAudio({ peer }: { peer: PeerView }) {
     }
 
     el.srcObject = new MediaStream([track]);
-    const play = () => el.play().catch(() => { });
+    const play = () => el.play().catch(() => {});
     play();
 
     window.addEventListener("pointerdown", play);
@@ -102,8 +105,14 @@ function PeerAudio({ peer }: { peer: PeerView }) {
     };
   }, [track]);
 
-  return <audio ref={ref} autoPlay playsInline className="video-peer-audio" />;
+  return <audio ref={ref} autoPlay playsInline className="hidden" />;
 }
+
+const videoCardClass =
+  "relative aspect-video w-[clamp(112px,14vw,176px)] shrink-0 overflow-hidden rounded-[10px] border border-line bg-midnight shadow-[0_6px_18px_#00000059] transition-[border-color,box-shadow] duration-150 [&>video]:block [&>video]:h-full [&>video]:w-full [&>video]:bg-black [&>video]:object-cover";
+
+const videoToggleClass =
+  "grid h-6 w-6 place-items-center rounded-full border border-line-strong bg-[#262a52cc] p-0 text-moonlight transition-colors hover:border-[#4a4f8a] hover:bg-dusk-raised focus-visible:outline-2 focus-visible:outline-portal [&>svg]:h-3 [&>svg]:w-3";
 
 function PeerCard({
   peer,
@@ -115,7 +124,13 @@ function PeerCard({
   meta?: UserMeta;
 }) {
   return (
-    <div className={`video-card${peer.speaking ? " speaking" : ""}`}>
+    <div
+      className={cx(
+        videoCardClass,
+        peer.speaking &&
+          "border-portal shadow-[0_0_0_1px_var(--color-portal),0_0_14px_#3ee6c14d]",
+      )}
+    >
       {peer.cam ? (
         <video
           autoPlay
@@ -126,10 +141,15 @@ function PeerCard({
       ) : (
         <Placeholder meta={meta} name={name} />
       )}
-      <div className="video-footer">
-        <span className="video-name">{name}</span>
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-1 bg-gradient-to-b from-transparent to-[#14162bcc] px-1.5 pt-3 pb-1">
+        <span className="max-w-[70%] truncate font-mono text-[0.6rem] leading-5 text-moonlight drop-shadow">
+          {name}
+        </span>
         {!peer.mic && (
-          <span className="video-muted" title="Mic off">
+          <span
+            className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border border-alert/35 bg-[#14162bcc] text-alert [&>svg]:h-2.5 [&>svg]:w-2.5"
+            title="Mic off"
+          >
             <MicIcon off />
           </span>
         )}
@@ -154,8 +174,10 @@ export default function VideoDock({
 
   return (
     <>
-      <div className="hud top-center video-dock">
-        <div className="video-card self">
+      <div
+        className={`${hudBaseClass} top-20 left-1/2 max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-2 overflow-x-auto rounded-xl sm:top-4`}
+      >
+        <div className={videoCardClass}>
           {video.camOn ? (
             <video
               autoPlay
@@ -166,18 +188,26 @@ export default function VideoDock({
           ) : (
             <Placeholder meta={meta[selfUserId]} name={selfUsername} />
           )}
-          <div className="video-footer">
-            <span className="video-name">you</span>
-            <div className="video-toggles">
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-1 bg-gradient-to-b from-transparent to-[#14162bcc] px-1.5 pt-3 pb-1">
+            <span className="max-w-[60%] truncate font-mono text-[0.6rem] leading-5 text-portal drop-shadow">
+              you
+            </span>
+            <div className="flex gap-1">
               <button
-                className={`video-toggle${video.micOn ? "" : " off"}`}
+                className={cx(
+                  videoToggleClass,
+                  !video.micOn && "border-alert/35 bg-[#3b1b2ecc] text-alert",
+                )}
                 onClick={video.toggleMic}
                 title={video.micOn ? "Turn mic off" : "Turn mic on"}
               >
                 <MicIcon off={!video.micOn} />
               </button>
               <button
-                className={`video-toggle${video.camOn ? "" : " off"}`}
+                className={cx(
+                  videoToggleClass,
+                  !video.camOn && "border-alert/35 bg-[#3b1b2ecc] text-alert",
+                )}
                 onClick={video.toggleCam}
                 title={video.camOn ? "Turn camera off" : "Turn camera on"}
               >

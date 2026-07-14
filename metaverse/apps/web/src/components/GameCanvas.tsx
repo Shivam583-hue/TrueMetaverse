@@ -38,5 +38,5 @@ export default function GameCanvas({
     };
   }, [playerName, appearance]);
 
-  return <div ref={parentRef} className="space-canvas" />;
+  return <div ref={parentRef} className="space-canvas overflow-hidden" />;
 }
