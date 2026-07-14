@@ -1,5 +1,5 @@
 import GameCanvas from "../components/GameCanvas";
-import SpaceControls from "../components/SpaceControls";
+import SpaceControls, { MobileJoystick } from "../components/SpaceControls";
 import { useAuth } from "../lib/auth";
 import { hudBaseClass } from "../lib/ui";
 
@@ -14,6 +14,7 @@ export default function StudyDemo() {
       <div className={`${hudBaseClass} right-4 top-4`}>
         <SpaceControls />
       </div>
+      <MobileJoystick />
     </div>
   );
 }

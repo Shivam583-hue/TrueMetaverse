@@ -31,6 +31,8 @@ export class SpaceScene extends Phaser.Scene {
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
+  private virtualDirection: Direction | null = null;
+  private movementEnabled = true;
 
   constructor() {
     super("space");
@@ -104,9 +106,11 @@ export class SpaceScene extends Phaser.Scene {
 
     EventBus.on(SpaceEvent.PlayerName, this.onPlayerName, this);
     EventBus.on(SpaceEvent.PlayerAppearance, this.onPlayerAppearance, this);
+    EventBus.on(SpaceEvent.MoveDirection, this.onMoveDirection, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       EventBus.off(SpaceEvent.PlayerName, this.onPlayerName, this);
       EventBus.off(SpaceEvent.PlayerAppearance, this.onPlayerAppearance, this);
+      EventBus.off(SpaceEvent.MoveDirection, this.onMoveDirection, this);
     });
     EventBus.emit(SpaceEvent.SceneReady);
   }
@@ -120,6 +124,11 @@ export class SpaceScene extends Phaser.Scene {
   protected onLocalStep(): void {}
 
   setKeyboardEnabled(enabled: boolean): void {
+    this.movementEnabled = enabled;
+    if (!enabled) {
+      this.virtualDirection = null;
+      this.movement.update(null);
+    }
     const keyboard = this.input?.keyboard;
     if (!keyboard) return;
     keyboard.enabled = enabled;
@@ -128,7 +137,6 @@ export class SpaceScene extends Phaser.Scene {
     } else {
       keyboard.resetKeys();
       keyboard.removeCapture(MOVEMENT_KEYS);
-      this.movement.update(null);
     }
   }
 
@@ -140,7 +148,13 @@ export class SpaceScene extends Phaser.Scene {
     this.player.setAppearance(appearance);
   }
 
+  private onMoveDirection(direction: Direction | null): void {
+    this.virtualDirection = this.movementEnabled ? direction : null;
+  }
+
   private readDirection(): Direction | null {
+    if (!this.movementEnabled) return null;
+    if (this.virtualDirection) return this.virtualDirection;
     if (this.cursors.left.isDown || this.wasd.A.isDown) return "left";
     if (this.cursors.right.isDown || this.wasd.D.isDown) return "right";
     if (this.cursors.up.isDown || this.wasd.W.isDown) return "up";

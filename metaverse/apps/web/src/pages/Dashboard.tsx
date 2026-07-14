@@ -67,14 +67,14 @@ export default function Dashboard() {
     api
       .officialSpaces()
       .then((res) => setOfficial(res.spaces))
-      .catch(() => {});
+      .catch(() => { });
     if (session) {
       api
         .metadataBulk([session.userId])
         .then((res) =>
           setAppearance(normalizeAppearance(res.avatars[0]?.wokaAppearance)),
         )
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [refreshSpaces, session]);
 
@@ -93,7 +93,7 @@ export default function Dashboard() {
 
   async function saveAppearance(next: WokaAppearance) {
     setAppearance(next);
-    await api.updateWoka(next).catch(() => {});
+    await api.updateWoka(next).catch(() => { });
   }
 
   function askToDelete(space: SpaceSummary) {
@@ -136,7 +136,7 @@ export default function Dashboard() {
           <div className="min-w-0">
             <p className={eyebrowClass}>YOUR LOBBY</p>
             <h1 className="max-w-3xl break-words font-pixel text-[clamp(1.25rem,3.3vw,2.15rem)] leading-[1.45] text-moonlight [overflow-wrap:anywhere]">
-              Welcome back, {session?.username ?? "explorer"}.
+              <span className="text-[#ffd35d]">Welcome back</span>, {session?.username ?? "explorer"}.
             </h1>
             <p className="mt-3 max-w-2xl text-[clamp(0.95rem,2vw,1.08rem)] leading-relaxed text-fog">
               Choose a shared space, meet your crew, and make this session
@@ -232,7 +232,6 @@ export default function Dashboard() {
                           {space.name}
                         </span>
                         <span className="flex shrink-0 items-center gap-1.5 text-xs text-[#8bdabb]">
-                          <i className="h-1.5 w-1.5 rounded-full bg-portal shadow-[0_0_8px_var(--color-portal)]" />{" "}
                           open now
                         </span>
                       </div>
@@ -433,7 +432,7 @@ function CreateRoomModal({
         setMaps(res.maps);
         setMapId(res.maps[0]?.id ?? null);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   async function handleSubmit(e: FormEvent) {

@@ -10,7 +10,7 @@ import { useStudyTimer } from "../hooks/useStudyTimer";
 import { useSpaceMusic } from "../hooks/useSpaceMusic";
 import { useVideoChat } from "../hooks/useVideoChat";
 import { usePresentation, resolveZone } from "../hooks/usePresentation";
-import SpaceControls from "../components/SpaceControls";
+import SpaceControls, { MobileJoystick } from "../components/SpaceControls";
 import WokaPreview from "../components/WokaPreview";
 import LeaderboardDialog from "../components/LeaderboardDialog";
 import VideoDock from "../components/VideoDock";
@@ -29,7 +29,7 @@ export default function Arena() {
   const sceneRef = useRef<MultiplayerSpaceScene | null>(null);
   const socketRef = useRef<ArenaSocket | null>(null);
 
-  const chat = useArenaChat({ sceneRef, socketRef });
+  const chat = useArenaChat({ socketRef });
   const conn = useArenaConnection({
     spaceId,
     session,
@@ -59,9 +59,12 @@ export default function Arena() {
   const [copied, setCopied] = useState(false);
   const [watching, setWatching] = useState(false);
 
+  const inputBlocked =
+    watching || whiteboardOpen || rankingOpen || chat.chatOpen;
+
   useEffect(() => {
-    sceneRef.current?.setKeyboardEnabled(!watching && !whiteboardOpen);
-  }, [watching, whiteboardOpen]);
+    sceneRef.current?.setKeyboardEnabled(!inputBlocked);
+  }, [inputBlocked]);
   useEffect(() => {
     if (!video.screenShare) setWatching(false);
   }, [video.screenShare]);
@@ -233,7 +236,7 @@ export default function Arena() {
       </div>
 
       <div
-        className={`${hudBaseClass} bottom-3 left-1/2 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 flex-wrap justify-center sm:bottom-4`}
+        className={`${hudBaseClass} bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] right-3 max-w-[calc(100vw-8.5rem)] flex-wrap justify-end sm:bottom-4 sm:left-1/2 sm:right-auto sm:max-w-[calc(100vw-1.5rem)] sm:-translate-x-1/2 sm:justify-center`}
       >
         {conn.studyEnabled && (
           <button
@@ -300,10 +303,17 @@ export default function Arena() {
           </span>
         ) : (
           <span className={`${hudChipClass} font-mono text-[0.65rem]`}>
-            arrow keys / wasd to move
+            <span className="[@media(pointer:coarse)]:hidden">
+              arrow keys / wasd to move
+            </span>
+            <span className="hidden [@media(pointer:coarse)]:inline">
+              use the joystick to move
+            </span>
           </span>
         )}
       </div>
+
+      {!inputBlocked && <MobileJoystick />}
 
       <div
         className={cx(

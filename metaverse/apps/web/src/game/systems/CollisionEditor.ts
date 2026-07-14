@@ -123,10 +123,10 @@ export class CollisionEditor {
     const fps = Math.round(this.scene.game.loop.actualFps);
     this.status.setText(
       `tile ${tile.x},${tile.y}   fps ${fps}   ` +
-        (this.editOn
-          ? "EDIT: drag paints, right/shift erases, alt-drag rect, I invert, V void, X export"
-          : "E: edit collision") +
-        (this.saveState ? `   ${this.saveState}` : ""),
+      (this.editOn
+        ? "EDIT: drag paints, right/shift erases, alt-drag rect, I invert, V void, X export"
+        : "E: edit collision") +
+      (this.saveState ? `   ${this.saveState}` : ""),
     );
     const h = this.scene.scale.height;
     this.status.setPosition(10, h - 10);
@@ -280,7 +280,7 @@ export class CollisionEditor {
     URL.revokeObjectURL(url);
     console.log(
       `collision.json: ${this.grid.changedSinceLoad()} tile(s) changed since load - ` +
-        `commit it as public/assets/spaces/${this.config.id}/collision.json`,
+      `commit it as public/assets/spaces/${this.config.id}/collision.json`,
     );
   }
 }

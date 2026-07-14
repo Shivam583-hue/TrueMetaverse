@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, RefObject } from "react";
 import type { ArenaSocket } from "../lib/ws";
-import type { MultiplayerSpaceScene } from "../game/scenes/MultiplayerSpaceScene";
 
 export type ChatEntry = {
   key: number;
@@ -14,10 +13,8 @@ export type ChatEntry = {
 const MAX_MESSAGES = 200;
 
 export function useArenaChat({
-  sceneRef,
   socketRef,
 }: {
-  sceneRef: RefObject<MultiplayerSpaceScene | null>;
   socketRef: RefObject<ArenaSocket | null>;
 }) {
   const [messages, setMessages] = useState<ChatEntry[]>([]);
@@ -41,9 +38,8 @@ export function useArenaChat({
   }, [messages, chatOpen]);
 
   useEffect(() => {
-    sceneRef.current?.setKeyboardEnabled(!chatOpen);
     if (chatOpen) chatInputRef.current?.focus();
-  }, [chatOpen, sceneRef]);
+  }, [chatOpen]);
 
   const sendChat = useCallback(
     (e: FormEvent) => {
