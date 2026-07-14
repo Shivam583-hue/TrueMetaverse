@@ -43,6 +43,9 @@ export type SpaceDetail = {
   name: string;
   code: string | null;
   official: boolean;
+  whiteboardEnabled: boolean;
+  isTeacher: boolean;
+  teacher: { userId: string; username: string } | null;
   mapImage: string | null;
   dimensions: string;
   elements: { id: string; element: Element; x: number; y: number }[];

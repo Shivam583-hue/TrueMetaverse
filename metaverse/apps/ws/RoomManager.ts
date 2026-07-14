@@ -1,8 +1,9 @@
 import type { User } from "./User";
-import type { OutgoingMessage } from "@repo/types";
+import type { OutgoingMessage, WhiteboardScene } from "@repo/types";
 
 export class RoomManager {
   rooms: Map<string, User[]> = new Map();
+  whiteboards: Map<string, WhiteboardScene> = new Map();
   static instance: RoomManager;
 
   private constructor() {
@@ -20,10 +21,14 @@ export class RoomManager {
     if (!this.rooms.has(spaceId)) {
       return;
     }
-    this.rooms.set(
-      spaceId,
-      this.rooms.get(spaceId)?.filter((u) => u.id !== user.id) ?? [],
-    );
+    const users =
+      this.rooms.get(spaceId)?.filter((u) => u.id !== user.id) ?? [];
+    if (users.length === 0) {
+      this.rooms.delete(spaceId);
+      this.whiteboards.delete(spaceId);
+      return;
+    }
+    this.rooms.set(spaceId, users);
   }
 
   public addUser(spaceId: string, user: User) {
@@ -47,5 +52,21 @@ export class RoomManager {
 
   public broadcastAll(message: OutgoingMessage, roomId: string) {
     this.rooms.get(roomId)?.forEach((u) => u.send(message));
+  }
+
+  public getWhiteboard(roomId: string): WhiteboardScene {
+    return this.whiteboards.get(roomId) ?? { elements: [], version: 0 };
+  }
+
+  public updateWhiteboard(
+    roomId: string,
+    elements: unknown[],
+  ): WhiteboardScene {
+    const scene = {
+      elements,
+      version: this.getWhiteboard(roomId).version + 1,
+    };
+    this.whiteboards.set(roomId, scene);
+    return scene;
   }
 }

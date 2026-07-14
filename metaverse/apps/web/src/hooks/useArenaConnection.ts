@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { RefObject } from "react";
 import type Phaser from "phaser";
+import type { WhiteboardScene } from "@repo/types";
 import { api } from "../lib/api";
 import type { Session } from "../lib/auth";
 import { ArenaSocket } from "../lib/ws";
@@ -45,6 +46,14 @@ export function useArenaConnection({
   const [studyEnabled, setStudyEnabled] = useState(false);
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
   const [videoEnabled, setVideoEnabled] = useState(false);
+  const [whiteboardEnabled, setWhiteboardEnabled] = useState(false);
+  const [isTeacher, setIsTeacher] = useState(false);
+  const [teacher, setTeacher] = useState<{
+    userId: string;
+    username: string;
+  } | null>(null);
+  const [whiteboardScene, setWhiteboardScene] =
+    useState<WhiteboardScene | null>(null);
   const [spaceConfig, setSpaceConfig] = useState<SpaceConfig | null>(null);
   const [localTile, setLocalTile] = useState<TileCoord | null>(null);
   const [online, setOnline] = useState<Record<string, string>>({});
@@ -102,6 +111,7 @@ export function useArenaConnection({
       {
         "space-joined": (payload) => {
           setStatus("live");
+          setWhiteboardScene(payload.whiteboard);
           setOnline(
             Object.fromEntries(payload.users.map((u) => [u.id, u.userId])),
           );
@@ -162,6 +172,7 @@ export function useArenaConnection({
             at: payload.at,
           });
         },
+        "whiteboard-update": (payload) => setWhiteboardScene(payload),
       },
       () => setStatus("closed"),
     );
@@ -180,6 +191,9 @@ export function useArenaConnection({
       setSpaceName(detail.name);
       setSpaceCode(detail.code);
       setIsOfficial(detail.official);
+      setWhiteboardEnabled(detail.whiteboardEnabled);
+      setIsTeacher(detail.isTeacher);
+      setTeacher(detail.teacher);
 
       const config = resolveSpaceConfig(detail.mapImage);
       flushSync(() => {
@@ -218,6 +232,18 @@ export function useArenaConnection({
     };
   }, [spaceId, session, canvasRef, sceneRef, socketRef, pushMessage]);
 
+  const publishWhiteboard = useCallback(
+    (elements: readonly unknown[]) => {
+      const nextElements = Array.from(elements);
+      setWhiteboardScene((previous) => ({
+        elements: nextElements,
+        version: previous?.version ?? 0,
+      }));
+      socketRef.current?.whiteboard(nextElements);
+    },
+    [socketRef],
+  );
+
   return {
     spaceName,
     spaceCode,
@@ -225,6 +251,11 @@ export function useArenaConnection({
     studyEnabled,
     musicUrl,
     videoEnabled,
+    whiteboardEnabled,
+    isTeacher,
+    teacher,
+    whiteboardScene,
+    publishWhiteboard,
     spaceConfig,
     localTile,
     online,

@@ -1,4 +1,8 @@
-import { isStudyEnabled, isVideoEnabled } from "@repo/types";
+import {
+  isStudyEnabled,
+  isVideoEnabled,
+  isWhiteboardEnabled,
+} from "@repo/types";
 
 export const TILE_SIZE = 32;
 
@@ -28,6 +32,7 @@ export type SpaceConfig = {
   study?: boolean;
   music?: string;
   video?: boolean;
+  whiteboard?: boolean;
   presentation?: PresentationConfig;
 };
 
@@ -101,6 +106,7 @@ function withCapabilities(config: SpaceConfig): SpaceConfig {
     ...config,
     study: isStudyEnabled(config.imagePath),
     video: isVideoEnabled(config.imagePath),
+    whiteboard: isWhiteboardEnabled(config.imagePath),
   };
 }
 

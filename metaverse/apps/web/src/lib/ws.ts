@@ -54,6 +54,13 @@ export class ArenaSocket {
     this.send({ type: "chat", payload: { text } });
   }
 
+  whiteboard(elements: readonly unknown[]) {
+    this.send({
+      type: "whiteboard-update",
+      payload: { elements: Array.from(elements) },
+    });
+  }
+
   close() {
     this.ws.onclose = null;
     this.ws.close();

@@ -15,6 +15,7 @@ import WokaPreview from "../components/WokaPreview";
 import LeaderboardDialog from "../components/LeaderboardDialog";
 import VideoDock from "../components/VideoDock";
 import ScreenShareDialog from "../components/ScreenShareDialog";
+import WhiteboardDialog from "../components/WhiteboardDialog";
 
 export default function Arena() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -48,14 +49,15 @@ export default function Arena() {
   const timer = useStudyTimer(spaceId, sceneRef, conn.studyEnabled);
   const music = useSpaceMusic(conn.musicUrl);
 
-  const [boardOpen, setBoardOpen] = useState(false);
+  const [rankingOpen, setRankingOpen] = useState(false);
+  const [whiteboardOpen, setWhiteboardOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [watching, setWatching] = useState(false);
 
   useEffect(() => {
-    sceneRef.current?.setKeyboardEnabled(!watching);
-  }, [watching]);
+    sceneRef.current?.setKeyboardEnabled(!watching && !whiteboardOpen);
+  }, [watching, whiteboardOpen]);
   useEffect(() => {
     if (!video.screenShare) setWatching(false);
   }, [video.screenShare]);
@@ -145,7 +147,12 @@ export default function Arena() {
                     className="online-woka"
                   />
                 )}
-                {session?.username} (you)
+                <span className="online-name">
+                  {session?.username} (you)
+                </span>
+                {conn.isTeacher && (
+                  <span className="teacher-badge">Teacher</span>
+                )}
               </li>
             )}
             {onlineEntries.map(([sid, userId]) => (
@@ -158,13 +165,29 @@ export default function Arena() {
                     className="online-woka"
                   />
                 )}
-                {conn.meta[userId]?.username ?? userId.slice(0, 8)}
+                <span className="online-name">
+                  {conn.meta[userId]?.username ?? userId.slice(0, 8)}
+                </span>
+                {conn.teacher?.userId === userId && (
+                  <span className="teacher-badge">Teacher</span>
+                )}
               </li>
             ))}
           </ul>
         </div>
+        {conn.whiteboardEnabled && (
+          <button
+            className="btn primary whiteboard-trigger"
+            onClick={() => setWhiteboardOpen(true)}
+          >
+            <span className="whiteboard-trigger-icon" aria-hidden="true">
+              ✎
+            </span>
+            Open whiteboard
+          </button>
+        )}
         {conn.studyEnabled && (
-          <button className="btn ghost" onClick={() => setBoardOpen(true)}>
+          <button className="btn ghost" onClick={() => setRankingOpen(true)}>
             Ranking board
           </button>
         )}
@@ -313,7 +336,20 @@ export default function Arena() {
         />
       )}
 
-      {boardOpen && <LeaderboardDialog onClose={() => setBoardOpen(false)} />}
+      {whiteboardOpen && conn.whiteboardEnabled && (
+        <WhiteboardDialog
+          teacherName={conn.teacher?.username ?? "Classroom creator"}
+          isTeacher={conn.isTeacher}
+          elements={conn.whiteboardScene?.elements ?? []}
+          sceneVersion={conn.whiteboardScene?.version ?? 0}
+          onElementsChange={conn.publishWhiteboard}
+          onClose={() => setWhiteboardOpen(false)}
+        />
+      )}
+
+      {rankingOpen && (
+        <LeaderboardDialog onClose={() => setRankingOpen(false)} />
+      )}
     </div>
   );
 }

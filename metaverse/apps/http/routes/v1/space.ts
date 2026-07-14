@@ -2,6 +2,7 @@ import { Router } from "express";
 import client from "@repo/db/client";
 import { userMiddleware } from "../../middleware/user";
 import { CreateSpaceSchema } from "../../types";
+import { isWhiteboardEnabled } from "@repo/types";
 export const spaceRouter = Router();
 
 function generateCode(length: number) {
@@ -170,6 +171,11 @@ spaceRouter.get("/:spaceId", userMiddleware, async (req, res) => {
       id: req.params.spaceId as string,
     },
     include: {
+      creator: {
+        select: {
+          username: true,
+        },
+      },
       elements: {
         include: {
           element: true,
@@ -183,10 +189,17 @@ spaceRouter.get("/:spaceId", userMiddleware, async (req, res) => {
     return;
   }
 
+  const whiteboardEnabled = isWhiteboardEnabled(space.mapImage);
+
   res.json({
     name: space.name,
     code: space.creatorId === req.userId ? space.code : null,
     official: space.official,
+    whiteboardEnabled,
+    isTeacher: whiteboardEnabled && space.creatorId === req.userId,
+    teacher: whiteboardEnabled
+      ? { userId: space.creatorId, username: space.creator.username }
+      : null,
     mapImage: space.mapImage,
     dimensions: `${space.width}x${space.height}`,
     elements: space.elements.map((e) => ({

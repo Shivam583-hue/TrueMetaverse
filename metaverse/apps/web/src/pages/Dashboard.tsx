@@ -47,14 +47,14 @@ export default function Dashboard() {
     api
       .officialSpaces()
       .then((res) => setOfficial(res.spaces))
-      .catch(() => {});
+      .catch(() => { });
     if (session) {
       api
         .metadataBulk([session.userId])
         .then((res) =>
           setAppearance(normalizeAppearance(res.avatars[0]?.wokaAppearance)),
         )
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [refreshSpaces, session]);
 
@@ -73,7 +73,7 @@ export default function Dashboard() {
 
   async function saveAppearance(next: WokaAppearance) {
     setAppearance(next);
-    await api.updateWoka(next).catch(() => {});
+    await api.updateWoka(next).catch(() => { });
   }
 
   function askToDelete(space: SpaceSummary) {
@@ -373,7 +373,7 @@ function CreateRoomModal({
         setMaps(res.maps);
         setMapId(res.maps[0]?.id ?? null);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   async function handleSubmit(e: FormEvent) {
@@ -407,7 +407,7 @@ function CreateRoomModal({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Exam prep crew"
+            placeholder="My space"
             required
             autoFocus
           />

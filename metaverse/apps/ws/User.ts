@@ -1,6 +1,10 @@
 import { WebSocket } from "ws";
 import { RoomManager } from "./RoomManager";
-import type { IncomingMessage, OutgoingMessage } from "@repo/types";
+import {
+  isWhiteboardEnabled,
+  type IncomingMessage,
+  type OutgoingMessage,
+} from "@repo/types";
 import client from "@repo/db/client";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { JWT_PASSWORD } from "./config";
@@ -14,6 +18,8 @@ import {
 const MAX_CHAT_LENGTH = 500;
 const CHAT_WINDOW_MS = 10_000;
 const CHAT_MAX_IN_WINDOW = 10;
+const MAX_WHITEBOARD_ELEMENTS = 5_000;
+const MAX_WHITEBOARD_BYTES = 1_500_000;
 
 type Payload<T extends IncomingMessage["type"]> = Extract<
   IncomingMessage,
@@ -37,6 +43,8 @@ export class User {
   private spaceWidth = 0;
   private spaceHeight = 0;
   private collision: CollisionData | null = null;
+  private whiteboardEnabled = false;
+  private canEditWhiteboard = false;
   public x: number;
   public y: number;
   private ws: WebSocket;
@@ -70,6 +78,9 @@ export class User {
           case "chat":
             this.handleChat(parsedData.payload);
             break;
+          case "whiteboard-update":
+            this.handleWhiteboardUpdate(parsedData.payload);
+            break;
         }
       } catch (err) {
         console.error("Failed to handle ws message", err);
@@ -95,6 +106,9 @@ export class User {
     this.spaceWidth = space.width;
     this.spaceHeight = space.height;
     this.collision = loadCollision(space.mapImage);
+    this.whiteboardEnabled = isWhiteboardEnabled(space.mapImage);
+    this.canEditWhiteboard =
+      this.whiteboardEnabled && space.creatorId === this.userId;
 
     RoomManager.getInstance().addUser(spaceId, this);
     const spawn = centerSpawn(this.collision, space.width, space.height);
@@ -111,6 +125,9 @@ export class User {
             ?.filter((u) => u.id !== this.id)
             ?.map((u) => ({ id: u.id, userId: u.userId!, x: u.x, y: u.y })) ??
           [],
+        whiteboard: this.whiteboardEnabled
+          ? RoomManager.getInstance().getWhiteboard(spaceId)
+          : null,
       },
     });
     RoomManager.getInstance().broadcast(
@@ -183,7 +200,39 @@ export class User {
     );
   }
 
+  private handleWhiteboardUpdate(
+    payload: Payload<"whiteboard-update">,
+  ): void {
+    if (!this.spaceId || !this.canEditWhiteboard) return;
+    if (
+      !Array.isArray(payload.elements) ||
+      payload.elements.length > MAX_WHITEBOARD_ELEMENTS ||
+      payload.elements.some(
+        (element) =>
+          element === null ||
+          typeof element !== "object" ||
+          Array.isArray(element),
+      )
+    ) {
+      return;
+    }
+
+    const serialized = JSON.stringify(payload.elements);
+    if (serialized.length > MAX_WHITEBOARD_BYTES) return;
+
+    const scene = RoomManager.getInstance().updateWhiteboard(
+      this.spaceId,
+      payload.elements,
+    );
+    RoomManager.getInstance().broadcast(
+      { type: "whiteboard-update", payload: scene },
+      this,
+      this.spaceId,
+    );
+  }
+
   destroy() {
+    if (!this.spaceId || !this.userId) return;
     RoomManager.getInstance().broadcast(
       {
         type: "user-left",
