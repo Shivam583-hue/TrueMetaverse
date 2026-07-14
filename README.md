@@ -161,6 +161,51 @@ TrueMetaverse/
     └── catalog.test.ts              # Seeded maps and avatars
 ```
 
+## Architecture overview and diagram
+
+<img width="1672" height="941" alt="metaverse" src="https://github.com/user-attachments/assets/dd694938-a144-49ef-9698-0c63ab3ce110" />
+
+The system is deliberately split into an **application plane** and a **media plane**. The application plane owns identity, room metadata, study data, movement, chat, whiteboards, and game rules. The media plane owns high-bandwidth WebRTC audio, video, and screen sharing. In production both planes run on the same VPS, but the boundary allows LiveKit or PostgreSQL to move to dedicated infrastructure later.
+
+```mermaid
+flowchart TB
+    Browser[Web browser<br/>React + Phaser + LiveKit client]
+    DNS[Cloudflare DNS]
+
+    subgraph VPS[Rocky Linux VPS · 8 GB RAM]
+        Caddy[Caddy L4<br/>TLS and SNI routing]
+
+        subgraph App[Application plane · Docker Compose]
+            Web[Nginx web gateway<br/>SPA + /api + /socket]
+            HTTP[Express HTTP API<br/>auth, rooms, study, media tokens]
+            WS[WebSocket server<br/>presence, chat, movement, games]
+            Jobs[Prisma migrate + seed<br/>one-shot jobs]
+            DB[(PostgreSQL 16<br/>persistent volume)]
+        end
+
+        subgraph Media[Media plane · host networking]
+            LK[LiveKit SFU<br/>WebRTC + TURN]
+            Redis[(Redis 7<br/>LiveKit coordination)]
+        end
+
+        Backup[pg_dump backup<br/>7-day local retention]
+    end
+
+    Browser --> DNS --> Caddy
+    Caddy -->|HTTPS metaverse.nemportfolio.in| Web
+    Web -->|/api/*| HTTP
+    Web <-->|/socket · WSS| WS
+    HTTP --> DB
+    WS --> DB
+    Jobs --> DB
+    HTTP -->|room-scoped access tokens| LK
+    Caddy -->|WSS rtc.nemportfolio.in| LK
+    Browser <-->|WebRTC UDP/TCP| LK
+    Browser -.->|TURN UDP/TLS fallback| LK
+    LK --> Redis
+    DB --> Backup
+```
+
 ### Where to make common changes
 
 | Change                             | Primary location                                      | Usually also check                                                |
@@ -208,48 +253,7 @@ Measured on 15 July 2026 from the current working tree. Bundle filenames are con
 - **Safe startup order:** Compose waits for PostgreSQL, applies Prisma migrations, performs idempotent seeding, checks HTTP health, and only then starts the public web gateway.
 - **Production operability:** container health checks, bounded local logs, persistent database storage, a PostgreSQL backup script, and TURN fallback are included.
 
-## Architecture overview and diagram
 
-The system is deliberately split into an **application plane** and a **media plane**. The application plane owns identity, room metadata, study data, movement, chat, whiteboards, and game rules. The media plane owns high-bandwidth WebRTC audio, video, and screen sharing. In production both planes run on the same VPS, but the boundary allows LiveKit or PostgreSQL to move to dedicated infrastructure later.
-
-```mermaid
-flowchart TB
-    Browser[Web browser<br/>React + Phaser + LiveKit client]
-    DNS[Cloudflare DNS]
-
-    subgraph VPS[Rocky Linux VPS · 8 GB RAM]
-        Caddy[Caddy L4<br/>TLS and SNI routing]
-
-        subgraph App[Application plane · Docker Compose]
-            Web[Nginx web gateway<br/>SPA + /api + /socket]
-            HTTP[Express HTTP API<br/>auth, rooms, study, media tokens]
-            WS[WebSocket server<br/>presence, chat, movement, games]
-            Jobs[Prisma migrate + seed<br/>one-shot jobs]
-            DB[(PostgreSQL 16<br/>persistent volume)]
-        end
-
-        subgraph Media[Media plane · host networking]
-            LK[LiveKit SFU<br/>WebRTC + TURN]
-            Redis[(Redis 7<br/>LiveKit coordination)]
-        end
-
-        Backup[pg_dump backup<br/>7-day local retention]
-    end
-
-    Browser --> DNS --> Caddy
-    Caddy -->|HTTPS metaverse.nemportfolio.in| Web
-    Web -->|/api/*| HTTP
-    Web <-->|/socket · WSS| WS
-    HTTP --> DB
-    WS --> DB
-    Jobs --> DB
-    HTTP -->|room-scoped access tokens| LK
-    Caddy -->|WSS rtc.nemportfolio.in| LK
-    Browser <-->|WebRTC UDP/TCP| LK
-    Browser -.->|TURN UDP/TLS fallback| LK
-    LK --> Redis
-    DB --> Backup
-```
 
 ### Architecture diagram prompt
 
