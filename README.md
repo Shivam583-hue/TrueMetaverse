@@ -229,7 +229,7 @@ Measured on 15 July 2026 from the current working tree. Bundle filenames are con
 | Signal                       |                                    Current value | Scope and interpretation                                                                                                                                                           |
 | ---------------------------- | -----------------------------------------------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Physical source lines        |                        **9,143** across 79 files | TS, TSX, JS, JSX, CSS, and Prisma under `metaverse/apps` and `metaverse/packages`; dependencies, generated clients, build output, and the external integration suite are excluded. |
-| Automated scenarios          |                           **63** across 11 files | 11 Bun unit/regression scenarios plus 52 Jest integration scenarios.                                                                                                               |
+| Automated scenarios          |                           **59** across 11 files | 11 Bun unit/regression scenarios plus 48 Jest integration scenarios.                                                                                                               |
 | Fast suite                   |                                **11/11 passing** | 58 assertions across player labels, map integrity, collision/visibility behavior, and authoritative Hide & Seek rounds.                                                            |
 | Tested-module coverage       |                    **84% lines / 84% functions** | Bun coverage across the four instrumented realtime/game modules. This is not whole-repository coverage.                                                                            |
 | Production transform         |                                **2,445 modules** | Vite 7 production build; measured build time was 22.27 seconds on the development machine.                                                                                         |
@@ -486,7 +486,7 @@ pnpm install --frozen-lockfile
 pnpm test -- --runInBand
 ```
 
-Current result: **48 passing, 4 failing (legacy garbage, will remove this), 52 total**. Authentication, catalog, rooms, metadata, chat, study, and LiveKit suites pass. Four movement assertions still target the old `space-joined.users` coordinate shape; the server now separates presence from `visibleUsers` and the tests need to be updated to the current protocol.
+Current result: **48 passing, 0 failing, 48 total**. Authentication, catalog, rooms, metadata, chat, study, LiveKit, WebSocket leave, and malformed-frame scenarios pass. Four obsolete movement scenarios that targeted coordinates in the former `space-joined.users` shape have been removed; equivalent cross-service movement coverage should eventually be rewritten against `visibleUsers` and the current visibility protocol.
 
 Coverage shown in this README comes from Bun's instrumented fast suite. Jest integration coverage is not currently collected, so combining it into the coverage percentage would be misleading.
 
@@ -560,7 +560,7 @@ for local setup, architectural rules, testing expectations, and the pull-request
 - **No certified global concurrency figure:** the 8 GB production VPS has not undergone a combined WebSocket, WebRTC, and TURN load test. Hide & Seek is intentionally capped at 12 players per room; other rooms do not yet enforce a hard participant cap.
 - **Single WebSocket authority:** room, whiteboard, and active game state are held in one process. Restarting it clears ephemeral state, and horizontal replicas would diverge without shared state or deterministic room routing.
 - **Single-server failure domain:** the app, PostgreSQL, Redis, LiveKit, and local backups currently share one VPS. A host failure can affect every layer; backups should also be copied offsite.
-- **Four stale integration assertions:** 48 of 52 integration scenarios pass. The remaining movement tests need to adopt the newer split between presence identities and visible player coordinates.
+- **Movement integration coverage gap:** four obsolete scenarios were removed, leaving 48 of 48 integration scenarios green. Valid/rejected movement and collision bounds should be reintroduced using the current split between presence identities and `visibleUsers` coordinates.
 - **Large collaboration chunks:** the initial shell is compact, but the Excalidraw/diagram dependency graph produces a 741.39 kB gzip shared lazy chunk. More granular whiteboard code splitting would improve first-open latency on slow devices.
 - **JWT storage:** seven-day bearer tokens are stored in browser `localStorage`. Moving to secure, `HttpOnly`, same-site cookies would reduce token exposure during a successful XSS attack.
 - **Local LiveKit favors Linux:** the development configuration uses host networking and is less portable to Docker environments without equivalent host-network support.
