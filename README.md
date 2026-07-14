@@ -4,7 +4,6 @@
 
 [![Live demo](https://img.shields.io/badge/live-metaverse.nemportfolio.in-2ea44f?style=flat-square&logo=googlechrome&logoColor=white)](https://metaverse.nemportfolio.in)
 [![Bun tests](https://img.shields.io/badge/Bun%20tests-11%2F11%20passing-2ea44f?style=flat-square&logo=bun&logoColor=white)](#testing)
-[![Integration tests](https://img.shields.io/badge/integration-48%2F52%20passing-e3a008?style=flat-square)](#testing)
 [![Tested-module coverage](https://img.shields.io/badge/tested--module%20coverage-84.70%25-3178c6?style=flat-square)](#engineering-scorecard)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](#technology-stack)
 [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](#docker-setup)
@@ -38,11 +37,13 @@ Create an account, choose an official map or create a room, and share its six-ch
 
 ## Demo video
 
-<!-- Replace this block with a YouTube, Vimeo, Loom, or local video link. -->
 
-> **Demo video coming soon.**
 
-<!-- > Suggested flow: account creation → Woka customization → room creation and join code → realtime movement/chat → study tools → video and screen share → Hide & Seek round. -->
+
+https://github.com/user-attachments/assets/2355b979-c2e7-484e-ac77-8f062c8f8906
+
+
+
 
 ## Key features
 
