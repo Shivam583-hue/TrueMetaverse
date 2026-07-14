@@ -27,7 +27,7 @@
   ],
   "settings": {
     "hideDurationMs": 30000,
-    "seekDurationMs": 180000,
+    "seekDurationMs": 210000,
     "resultsDurationMs": 10000,
     "sightRadius": 7,
     "concealRevealRadius": 2,

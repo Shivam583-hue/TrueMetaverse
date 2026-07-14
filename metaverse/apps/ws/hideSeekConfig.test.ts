@@ -47,6 +47,8 @@ describe("hide-and-seek map configuration", () => {
     expect(collision?.cols).toBe(57);
     expect(collision?.rows).toBe(57);
     expect(config?.hiderSpawns).toHaveLength(12);
+    expect(config?.settings.seekDurationMs).toBe(210_000);
+    expect(collision?.walkable.length).toBeGreaterThanOrEqual(1_300);
     for (const spawn of [config!.seekerSpawn, ...config!.hiderSpawns]) {
       expect(collision?.blocked[spawn.y * 57 + spawn.x]).toBe(0);
     }

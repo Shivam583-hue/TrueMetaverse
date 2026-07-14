@@ -1,6 +1,7 @@
 import { SpaceScene } from "./SpaceScene";
 import { RemotePlayer } from "../entities/RemotePlayer";
 import type { WokaAppearance } from "../woka/wokaConfig";
+import { resolvePlayerLabel } from "../entities/playerLabel";
 
 export type ArenaCallbacks = {
   onSceneReady: () => void;
@@ -14,6 +15,7 @@ export class MultiplayerSpaceScene extends SpaceScene {
   private remotes = new Map<string, RemotePlayer>();
   private localUserId: string | null = null;
   private knownAppearances = new Map<string, WokaAppearance>();
+  private knownUsernames = new Map<string, string>();
 
   constructor(private callbacks: ArenaCallbacks) {
     super();
@@ -45,19 +47,20 @@ export class MultiplayerSpaceScene extends SpaceScene {
 
   addRemote(id: string, userId: string, x: number, y: number): void {
     if (this.remotes.has(id)) this.removeRemote(id);
-    this.remotes.set(
-      id,
-      new RemotePlayer(
-        this,
-        this.grid,
-        this.spaceConfig.tileSize,
-        userId,
-        { x, y },
-        DEPTH_REMOTE,
-      ),
+    const remote = new RemotePlayer(
+      this,
+      this.grid,
+      this.spaceConfig.tileSize,
+      userId,
+      { x, y },
+      DEPTH_REMOTE,
+    );
+    this.remotes.set(id, remote);
+    remote.player.setDisplayName(
+      resolvePlayerLabel(userId, this.knownUsernames.get(userId)),
     );
     const known = this.knownAppearances.get(userId);
-    if (known) this.remotes.get(id)!.player.setAppearance(known);
+    if (known) remote.player.setAppearance(known);
   }
 
   moveRemote(id: string, x: number, y: number): void {
@@ -84,13 +87,17 @@ export class MultiplayerSpaceScene extends SpaceScene {
     appearance: WokaAppearance | null,
   ): void {
     if (appearance) this.knownAppearances.set(userId, appearance);
+    if (username?.trim()) this.knownUsernames.set(userId, username.trim());
     if (userId === this.localUserId) {
-      if (username) this.player.setDisplayName(`${username} (you)`);
+      if (username?.trim())
+        this.player.setDisplayName(`${username.trim()} (you)`);
       if (appearance) this.player.setAppearance(appearance);
     }
     for (const remote of this.remotes.values()) {
       if (remote.userId !== userId) continue;
-      if (username) remote.player.setDisplayName(username);
+      remote.player.setDisplayName(
+        resolvePlayerLabel(userId, this.knownUsernames.get(userId)),
+      );
       if (appearance) remote.player.setAppearance(appearance);
     }
   }

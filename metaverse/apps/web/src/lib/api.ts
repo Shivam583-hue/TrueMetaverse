@@ -131,7 +131,7 @@ export const api = {
     }),
   metadataBulk: (userIds: string[]) =>
     request<{ avatars: UserMetadata[] }>(
-      `/user/metadata/bulk?ids=[${userIds.join(",")}]`,
+      `/user/metadata/bulk?ids=${encodeURIComponent(userIds.join(","))}`,
     ),
 
   livekitToken: (spaceId: string) =>

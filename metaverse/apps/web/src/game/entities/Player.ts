@@ -40,7 +40,7 @@ export class Player extends Phaser.GameObjects.Container {
   }
 
   setDisplayName(name: string): void {
-    this.label.setText(name);
+    this.label.setText(name.trim() || "player");
     this.layoutLabels();
   }
 

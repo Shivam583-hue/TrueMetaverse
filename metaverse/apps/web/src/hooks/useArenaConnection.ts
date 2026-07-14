@@ -96,9 +96,15 @@ export function useArenaConnection({
           appearance: normalizeAppearance(null),
         });
       try {
-        const res = await api.metadataBulk(missing);
+        const batches: string[][] = [];
+        for (let index = 0; index < missing.length; index += 50) {
+          batches.push(missing.slice(index, index + 50));
+        }
+        const responses = await Promise.all(
+          batches.map((batch) => api.metadataBulk(batch)),
+        );
         if (disposed) return;
-        for (const m of res.avatars) {
+        for (const m of responses.flatMap((response) => response.avatars)) {
           const entry = {
             username: m.username,
             appearance: normalizeAppearance(m.wokaAppearance),
@@ -109,7 +115,13 @@ export function useArenaConnection({
           );
         }
         setMeta(Object.fromEntries(metaRef.current));
-      } catch {}
+      } catch {
+        for (const id of missing) {
+          if (metaRef.current.get(id)?.username === null) {
+            metaRef.current.delete(id);
+          }
+        }
+      }
     }
 
     const nameOf = (userId: string) =>
