@@ -20,7 +20,6 @@ TrueMetaverse combines the immediacy of a multiplayer game with the practical to
 - [Engineering scorecard](#engineering-scorecard)
 - [Technical highlights](#technical-highlights)
 - [Architecture overview and diagram](#architecture-overview-and-diagram)
-  - [Architecture diagram prompt](#architecture-diagram-prompt)
 - [Technology stack](#technology-stack)
 - [Prerequisites](#prerequisites)
 - [Local development setup](#local-development-setup)
