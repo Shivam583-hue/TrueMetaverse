@@ -255,8 +255,6 @@ Measured on 15 July 2026 from the current working tree. Bundle filenames are con
 
 
 
-### Architecture diagram prompt
-
 </details>
 
 ## Technology stack
@@ -570,13 +568,16 @@ for local setup, architectural rules, testing expectations, and the pull-request
 
 ## Security
 
-Please do not report security vulnerabilities through public issues.
-Contact me through email on shivamshivamshivam456@gmail.com or discord, username is duskwidow.
+Please do not report suspected vulnerabilities through public GitHub issues.
+
+Report them privately by email at
+[shivamshivamshivam456@gmail.com](mailto:shivamshivamshivam456@gmail.com)
+or through Discord: `duskwidow`.
+
+Include a description of the issue, reproduction steps, affected component,
+and any suggested mitigation. I will acknowledge reports as soon as practical.
 
 ## License
 
 The source code is licensed under the [MIT License](LICENSE).
 
-Third-party maps, character assets, fonts, music, icons, and other media
-remain subject to their respective licenses.
-Built as a practical exploration of multiplayer world state, collaboration UX, WebRTC infrastructure, and self-hosted production operations.
