@@ -19,7 +19,6 @@ export const userMiddleware = (
     const decoded = jwt.verify(token, JWT_PASSWORD, {
       algorithms: [JWT_ALGORITHM],
     }) as {
-      role: string;
       userId: string;
     };
     req.userId = decoded.userId;
