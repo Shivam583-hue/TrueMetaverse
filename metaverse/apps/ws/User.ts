@@ -16,6 +16,14 @@ import {
   type CollisionData,
 } from "./collision";
 import { loadHideSeekConfig } from "./hideSeekConfig";
+import z from "zod";
+
+const WS_CLOSE_UNAUTHORIZED = 4001;
+const JOIN_TIMEOUT_MS = 10_000;
+const JoinPayloadSchema = z.object({
+  spaceId: z.string().min(1).max(64),
+  token: z.string().min(1).max(4096),
+});
 
 const MAX_CHAT_LENGTH = 500;
 const CHAT_WINDOW_MS = 10_000;
@@ -51,6 +59,7 @@ export class User {
   public y: number;
   private ws: WebSocket;
   private chatTimestamps: number[] = [];
+  private joinTimeout: ReturnType<typeof setTimeout> | undefined;
 
   public get joinedSpaceId(): string | undefined {
     return this.spaceId;
@@ -61,7 +70,16 @@ export class User {
     this.x = 0;
     this.y = 0;
     this.ws = ws;
+    this.joinTimeout = setTimeout(() => {
+      if (!this.spaceId) this.ws.close(WS_CLOSE_UNAUTHORIZED, "join timeout");
+    }, JOIN_TIMEOUT_MS);
     this.initHandlers();
+  }
+
+  private clearJoinTimeout() {
+    if (this.joinTimeout === undefined) return;
+    clearTimeout(this.joinTimeout);
+    this.joinTimeout = undefined;
   }
 
   initHandlers() {
@@ -102,14 +120,24 @@ export class User {
 
   private async handleJoin(payload: Payload<"join">): Promise<void> {
     if (this.spaceId) return;
-    const { spaceId, token } = payload;
-    const userId = (
-      jwt.verify(token, JWT_PASSWORD, {
+    const parsed = JoinPayloadSchema.safeParse(payload);
+    if (!parsed.success) {
+      this.ws.close(WS_CLOSE_UNAUTHORIZED, "unauthorized");
+      return;
+    }
+    const { spaceId, token } = parsed.data;
+
+    let userId: string | undefined;
+    try {
+      const claims = jwt.verify(token, JWT_PASSWORD, {
         algorithms: [JWT_ALGORITHM],
-      }) as JwtPayload
-    ).userId;
+      }) as JwtPayload;
+      if (typeof claims.userId === "string") userId = claims.userId;
+    } catch {
+      userId = undefined;
+    }
     if (!userId) {
-      this.ws.close();
+      this.ws.close(WS_CLOSE_UNAUTHORIZED, "unauthorized");
       return;
     }
     this.userId = userId;
@@ -119,6 +147,7 @@ export class User {
       this.ws.close();
       return;
     }
+    this.clearJoinTimeout();
     this.spaceId = spaceId;
     this.spaceWidth = space.width;
     this.spaceHeight = space.height;
@@ -262,6 +291,7 @@ export class User {
   }
 
   destroy() {
+    this.clearJoinTimeout();
     if (!this.spaceId || !this.userId) return;
     RoomManager.getInstance().removeUser(this, this.spaceId);
     this.spaceId = undefined;
