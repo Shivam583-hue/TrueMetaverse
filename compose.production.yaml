@@ -114,7 +114,7 @@ services:
       target: web
     image: truemetaverse-web:production
     ports:
-      - 127.0.0.1:5173:8080
+      - 127.0.0.1:5173:8081
     depends_on:
       http:
         condition: service_healthy

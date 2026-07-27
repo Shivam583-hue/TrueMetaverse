@@ -51,5 +51,6 @@ apps:
                 connection_policies:
                   - alpn: ["http/1.1"]
               - handler: proxy
+                proxy_protocol: v2
                 upstreams:
                   - dial: ["localhost:5173"]
