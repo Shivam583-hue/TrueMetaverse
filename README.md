@@ -509,6 +509,11 @@ The live environment is self-hosted on one Rocky Linux VPS with 8 GB RAM. The fr
 
 Cloudflare provides DNS. Caddy obtains certificates and routes TLS by SNI. LiveKit media additionally uses UDP ranges 30000–40000 for relayed traffic and 50000–60000 for direct WebRTC media.
 
+Caddy proxies the application at layer 4, so it cannot add `X-Forwarded-For` and every request would otherwise reach Express with the same gateway address.
+It therefore speaks PROXY protocol v2 to Nginx, which listens for it on port 8081 and recovers the original address through `real_ip_header proxy_protocol`.
+Port 8080 stays plain HTTP for local Compose and the container health check.
+Rate limiting depends on this: without it a single client's failed logins would exhaust the shared `authLimiter` budget and lock out every user.
+
 ### Runtime layout
 
 - `/opt/truemetaverse` contains application source, Compose files, deployment configuration, and `.env.production`.
