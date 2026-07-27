@@ -3,8 +3,8 @@
 > A self-hosted, realtime 2D world for studying, meeting, presenting, playing, and simply being together online.
 
 [![Live demo](https://img.shields.io/badge/live-metaverse.nemportfolio.in-2ea44f?style=flat-square&logo=googlechrome&logoColor=white)](https://metaverse.nemportfolio.in)
-[![Bun tests](https://img.shields.io/badge/Bun%20tests-11%2F11%20passing-2ea44f?style=flat-square&logo=bun&logoColor=white)](#testing)
-[![Tested-module coverage](https://img.shields.io/badge/tested--module%20coverage-84.70%25-3178c6?style=flat-square)](#engineering-scorecard)
+[![Bun tests](https://img.shields.io/badge/Bun%20tests-31%2F31%20passing-2ea44f?style=flat-square&logo=bun&logoColor=white)](#testing)
+[![Tested-module coverage](https://img.shields.io/badge/tested--module%20coverage-87.45%25-3178c6?style=flat-square)](#engineering-scorecard)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](#technology-stack)
 [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](#docker-setup)
 
@@ -37,13 +37,7 @@ Create an account, choose an official map or create a room, and share its six-ch
 
 ## Demo video
 
-
-
-
 https://github.com/user-attachments/assets/2355b979-c2e7-484e-ac77-8f062c8f8906
-
-
-
 
 ## Key features
 
@@ -122,10 +116,12 @@ TrueMetaverse/
 │   │   │   └── package.json
 │   │   │
 │   │   ├── http/                   # Express control plane
-│   │   │   ├── middleware/         # JWT request authentication
+│   │   │   ├── middleware/         # JWT request authentication and rate limiting
+│   │   │   │   └── *.test.ts       # Token rejection and rate-limiter unit tests
 │   │   │   ├── routes/v1/          # Auth, users, rooms, study, and LiveKit tokens
 │   │   │   ├── types/              # Zod request schemas local to the API
 │   │   │   ├── config.ts           # JWT and LiveKit configuration
+│   │   │   ├── jwtSecret.ts        # Signing-secret loading and production validation
 │   │   │   ├── scrypt.ts           # Salted password hashing and verification
 │   │   │   └── index.ts            # HTTP server entrypoint and health endpoint
 │   │   │
@@ -151,7 +147,8 @@ TrueMetaverse/
 │
 └── tests/                           # Jest black-box integration suite
     ├── helpers.ts                   # HTTP/WS clients and reusable test fixtures
-    ├── auth.test.ts                 # Signup and signin behavior
+    ├── auth.test.ts                 # Signup policy, uniform signin failures, token claims
+    ├── wsAuth.test.ts               # WebSocket join token rejection and socket closure
     ├── rooms.test.ts                # Creation, codes, ownership, and deletion
     ├── movement.test.ts             # Join, movement, collision, and disconnects
     ├── chat.test.ts                 # Broadcast, validation, and rate limiting
@@ -224,14 +221,16 @@ The frontend and WebSocket server intentionally share protocol types but not aut
 
 ## Engineering scorecard
 
-Measured on 15 July 2026 from the current working tree. Bundle filenames are content-hashed and will change between builds.
+Source, test, and coverage signals were measured on 27 July 2026 from the current working tree.
+Build, bundle, and distribution figures are from the 15 July 2026 measurement and have not been re-run since.
+Bundle filenames are content-hashed and will change between builds.
 
 | Signal                       |                                    Current value | Scope and interpretation                                                                                                                                                           |
 | ---------------------------- | -----------------------------------------------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Physical source lines        |                        **9,143** across 79 files | TS, TSX, JS, JSX, CSS, and Prisma under `metaverse/apps` and `metaverse/packages`; dependencies, generated clients, build output, and the external integration suite are excluded. |
-| Automated scenarios          |                           **59** across 11 files | 11 Bun unit/regression scenarios plus 48 Jest integration scenarios.                                                                                                               |
-| Fast suite                   |                                **11/11 passing** | 58 assertions across player labels, map integrity, collision/visibility behavior, and authoritative Hide & Seek rounds.                                                            |
-| Tested-module coverage       |                    **84% lines / 84% functions** | Bun coverage across the four instrumented realtime/game modules. This is not whole-repository coverage.                                                                            |
+| Physical source lines        |                        **9,618** across 86 files | TS, TSX, JS, JSX, CSS, and Prisma under `metaverse/apps` and `metaverse/packages`; dependencies, generated clients, build output, and the external integration suite are excluded. |
+| Automated scenarios          |                           **90** across 15 files | 31 Bun unit/regression scenarios plus 59 Jest integration scenarios.                                                                                                               |
+| Fast suite                   |                                **31/31 passing** | 105 assertions across player labels, map integrity, collision/visibility behavior, authoritative Hide & Seek rounds, JWT rejection paths, and rate limiting.                       |
+| Tested-module coverage       |                    **87% lines / 93% functions** | Bun coverage across the nine instrumented auth/realtime/game modules. This is not whole-repository coverage.                                                                       |
 | Production transform         |                                **2,445 modules** | Vite 7 production build; measured build time was 22.27 seconds on the development machine.                                                                                         |
 | Initial app shell            |           **332.29 kB minified / 96.67 kB gzip** | Entry JavaScript and CSS only: 270.88 kB JS + 61.41 kB CSS. Fonts, maps, images, and lazy features are excluded.                                                                   |
 | Representative lazy bundles  | **Arena 337.05 kB gzip; LiveKit 133.68 kB gzip** | Heavy collaboration features are loaded after the initial route. The largest shared whiteboard dependency is currently 741.39 kB gzip.                                             |
@@ -248,12 +247,11 @@ Measured on 15 July 2026 from the current working tree. Bundle filenames are con
 - **Same-origin application gateway:** Nginx serves the SPA, forwards `/api/*` to Express, and upgrades `/socket` to the WebSocket service, avoiding browser CORS complexity.
 - **Independent media plane:** LiveKit carries audio, video, and screen-share media while application presence and gameplay remain on the WebSocket server.
 - **Defensive realtime inputs:** malformed frames are ignored, chat is rate-limited, whiteboard updates have element and byte limits, and metadata lookups are capped and batched.
+- **Hardened credential handling:** signup enforces a length, commonness, and username-similarity policy; signin returns a single uniform failure so unknown usernames and wrong passwords are indistinguishable; scrypt comparison is constant-time and tolerates malformed stored hashes; tokens carry no role claim; and failed attempts are rate-limited per IP.
 - **Collision as data:** each map ships an explicit grid, allowing the client and server to apply the same movement boundaries.
 - **Reproducible containers:** one multi-stage Dockerfile produces separate HTTP, WebSocket, and Nginx images from the same frozen Bun lockfile.
 - **Safe startup order:** Compose waits for PostgreSQL, applies Prisma migrations, performs idempotent seeding, checks HTTP health, and only then starts the public web gateway.
 - **Production operability:** container health checks, bounded local logs, persistent database storage, a PostgreSQL backup script, and TURN fallback are included.
-
-
 
 </details>
 
@@ -347,6 +345,7 @@ Copy `.env.example` to `.env` for local Docker development. Production secrets b
 | `POSTGRES_PORT`         | No                         | Local host port for PostgreSQL; defaults to `5433` in the full stack           |
 | `DATABASE_URL`          | Host processes             | Complete PostgreSQL connection string used by Prisma and `pg`                  |
 | `JWT_PASSWORD`          | Production                 | Secret used to sign seven-day application access tokens                        |
+| `AUTH_RATE_LIMIT_MAX`   | No                         | Failed signup/signin attempts allowed per IP per 15 minutes; defaults to `10`  |
 | `LIVEKIT_API_KEY`       | Media-enabled environments | Shared API key used by the HTTP service and LiveKit                            |
 | `LIVEKIT_API_SECRET`    | Media-enabled environments | Long shared secret used to sign LiveKit access tokens                          |
 | `LIVEKIT_PUBLIC_URL`    | Docker/production          | Browser-reachable signal URL, such as `wss://rtc.example.com`                  |
@@ -369,6 +368,7 @@ POSTGRES_PASSWORD=replace-with-a-random-local-password
 POSTGRES_PORT=5433
 
 JWT_PASSWORD=replace-with-a-long-random-secret
+AUTH_RATE_LIMIT_MAX=10
 
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=replace-with-at-least-32-random-characters
@@ -463,7 +463,7 @@ bun test
 bun test --coverage
 ```
 
-Current result: **11 passing, 0 failing**, with **84.70% line coverage** across the four modules loaded by this suite.
+Current result: **31 passing, 0 failing**, with **87.45% line coverage and 93.04% function coverage** across the nine modules loaded by this suite.
 
 The fast suite covers:
 
@@ -472,19 +472,26 @@ The fast suite covers:
 - Collision-aware line of sight
 - Authoritative round roles, phases, tags, concealment, and disconnects
 - Non-empty player labels when user metadata arrives late
+- JWT request authentication: expired tokens, tampered payloads and signatures, foreign signing secrets, and algorithms outside the allowlist
+- Rate-limiter behavior, including `skipSuccessfulRequests` and the auth-limit override parser
 
 ### Jest cross-service integration suite
 
 Start the complete local stack first, then run:
 
 ```bash
-make docker-up
+AUTH_RATE_LIMIT_MAX=100000 make docker-up
 cd tests
 pnpm install --frozen-lockfile
 pnpm test -- --runInBand
 ```
 
-Current result: **48 passing, 0 failing, 48 total**. Authentication, catalog, rooms, metadata, chat, study, LiveKit, WebSocket leave, and malformed-frame scenarios pass. Four obsolete movement scenarios that targeted coordinates in the former `space-joined.users` shape have been removed; equivalent cross-service movement coverage should eventually be rewritten against `visibleUsers` and the current visibility protocol.
+`AUTH_RATE_LIMIT_MAX` matters here.
+The suite deliberately drives failed signin and signup attempts, and `authLimiter` counts only failed requests over a fifteen-minute window.
+At the production default of `10` the counter survives the end of a run, so a second run inside the same window is throttled and roughly forty scenarios fail at once on a `429` from `signup`.
+Raising the override for local runs keeps the suite deterministic without weakening the shipped default.
+
+Current result: **59 passing, 0 failing, 59 total**, stable across repeated back-to-back runs. Authentication, catalog, rooms, metadata, chat, study, LiveKit, WebSocket authentication and leave, and malformed-frame scenarios pass. Four obsolete movement scenarios that targeted coordinates in the former `space-joined.users` shape have been removed; equivalent cross-service movement coverage should eventually be rewritten against `visibleUsers` and the current visibility protocol.
 
 Coverage shown in this README comes from Bun's instrumented fast suite. Jest integration coverage is not currently collected, so combining it into the coverage percentage would be misleading.
 
@@ -580,4 +587,3 @@ and any suggested mitigation. I will acknowledge reports as soon as practical.
 ## License
 
 The source code is licensed under the [MIT License](LICENSE).
-
