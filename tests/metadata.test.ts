@@ -40,16 +40,24 @@ describe("User metadata", () => {
       avatarId,
     });
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
   });
 
   test("Bulk metadata returns username and avatar url", async () => {
     const response = await http.get(
       `${BACKEND_URL}/api/v1/user/metadata/bulk?ids=[${userId}]`,
+      authHeader(token),
     );
     expect(response.data.avatars.length).toBe(1);
     expect(response.data.avatars[0].userId).toBe(userId);
     expect(response.data.avatars[0].username).toBeDefined();
     expect(response.data.avatars[0].avatarId).toBe(avatarUrl);
+  });
+
+  test("Bulk metadata requires authentication", async () => {
+    const response = await http.get(
+      `${BACKEND_URL}/api/v1/user/metadata/bulk?ids=[${userId}]`,
+    );
+    expect(response.status).toBe(401);
   });
 });

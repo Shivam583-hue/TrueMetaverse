@@ -7,14 +7,21 @@ import { SigninSchema, SignupSchema } from "../../types";
 import { hash, compare } from "../../scrypt";
 import client from "@repo/db/client";
 import jwt from "jsonwebtoken";
-import { JWT_PASSWORD } from "../../config";
+import { JWT_ALGORITHM, JWT_PASSWORD } from "../../config";
+import { authLimiter } from "../../middleware/rateLimit";
+import { randomBytes } from "node:crypto";
 
 export const router = Router();
 
-router.post("/signup", async (req, res) => {
+const INVALID_CREDENTIALS = { message: "Invalid username or password" };
+const dummyHash = hash(randomBytes(32).toString("hex"));
+
+router.post("/signup", authLimiter, async (req, res) => {
   const parsedData = SignupSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Validation failed" });
+    res.status(400).json({
+      message: parsedData.error.issues[0]?.message ?? "Validation failed",
+    });
     return;
   }
 
@@ -36,10 +43,10 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-router.post("/signin", async (req, res) => {
+router.post("/signin", authLimiter, async (req, res) => {
   const parsedData = SigninSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(403).json({ message: "Validation failed" });
+    res.status(401).json(INVALID_CREDENTIALS);
     return;
   }
 
@@ -51,30 +58,30 @@ router.post("/signin", async (req, res) => {
     });
 
     if (!user) {
-      res.status(403).json({ message: "User not found" });
+      await compare(parsedData.data.password, await dummyHash);
+      res.status(401).json(INVALID_CREDENTIALS);
       return;
     }
     const isValid = await compare(parsedData.data.password, user.password);
 
     if (!isValid) {
-      res.status(403).json({ message: "Invalid password" });
+      res.status(401).json(INVALID_CREDENTIALS);
       return;
     }
 
     const token = jwt.sign(
       {
         userId: user.id,
-        role: user.role,
       },
       JWT_PASSWORD,
-      { expiresIn: "7d" },
+      { expiresIn: "7d", algorithm: JWT_ALGORITHM },
     );
 
     res.json({
       token,
     });
   } catch (e) {
-    res.status(400).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 

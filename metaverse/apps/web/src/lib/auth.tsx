@@ -11,7 +11,6 @@ import { api } from "./api";
 export type Session = {
   token: string;
   userId: string;
-  role: "Admin" | "User";
   username: string;
 };
 
@@ -26,7 +25,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 function decodeSession(token: string, username: string): Session {
   const payload = JSON.parse(atob(token.split(".")[1]!));
-  return { token, userId: payload.userId, role: payload.role, username };
+  return { token, userId: payload.userId, username };
 }
 
 function loadSession(): Session | null {

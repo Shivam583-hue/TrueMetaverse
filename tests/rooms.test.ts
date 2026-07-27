@@ -46,19 +46,33 @@ describe("Rooms", () => {
 
     const response = await http.get(
       `${BACKEND_URL}/api/v1/space/code/${created.code}`,
+      authHeader(user.token),
     );
     expect(response.status).toBe(200);
     expect(response.data.spaceId).toBe(created.spaceId);
 
     const lower = await http.get(
       `${BACKEND_URL}/api/v1/space/code/${created.code.toLowerCase()}`,
+      authHeader(user.token),
     );
     expect(lower.data.spaceId).toBe(created.spaceId);
   });
 
   test("An unknown join code returns 400", async () => {
-    const response = await http.get(`${BACKEND_URL}/api/v1/space/code/XXXXXX`);
+    const response = await http.get(
+      `${BACKEND_URL}/api/v1/space/code/XXXXXX`,
+      authHeader(user.token),
+    );
     expect(response.status).toBe(400);
+  });
+
+  test("Looking up a join code requires authentication", async () => {
+    const created = await createRoom(user.token, "Guarded code room");
+
+    const response = await http.get(
+      `${BACKEND_URL}/api/v1/space/code/${created.code}`,
+    );
+    expect(response.status).toBe(401);
   });
 
   test("Room details include name, code, map image, and dimensions", async () => {
@@ -81,7 +95,7 @@ describe("Rooms", () => {
     const response = await http.get(
       `${BACKEND_URL}/api/v1/space/${created.spaceId}`,
     );
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
   });
 
   test("The join code is only exposed to the room's creator", async () => {

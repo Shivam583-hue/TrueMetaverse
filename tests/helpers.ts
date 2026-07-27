@@ -2,6 +2,7 @@ import axios2 from "axios";
 
 export const BACKEND_URL = "http://localhost:3000";
 export const WS_URL = "ws://localhost:3001";
+export const TEST_PASSWORD = "integration-test-pw";
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -44,7 +45,7 @@ export type TestUser = { username: string; userId: string; token: string };
 
 export async function makeUser(prefix = "user"): Promise<TestUser> {
   const username = `${prefix}-${Math.random()}`;
-  const password = "123456";
+  const password = TEST_PASSWORD;
   const signup = await http.post(`${BACKEND_URL}/api/v1/signup`, {
     username,
     password,
@@ -128,6 +129,19 @@ export async function nextOfType(
     await sleep(20);
   }
   return null;
+}
+
+export function waitForClose(
+  ws: WebSocket,
+  timeoutMs = 3000,
+): Promise<{ code: number } | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), timeoutMs);
+    (ws as any).onclose = (event: any) => {
+      clearTimeout(timer);
+      resolve({ code: event.code });
+    };
+  });
 }
 
 export async function nextMessage(

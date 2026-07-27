@@ -29,7 +29,7 @@ describe("LiveKit access tokens", () => {
     const noAuth = await http.post(`${BACKEND_URL}/api/v1/livekit/token`, {
       spaceId: videoSpaceId,
     });
-    expect(noAuth.status).toBe(403);
+    expect(noAuth.status).toBe(401);
 
     const badToken = await http.post(
       `${BACKEND_URL}/api/v1/livekit/token`,
@@ -103,7 +103,7 @@ describe("LiveKit access tokens", () => {
       spaceId: videoSpaceId,
       identity,
     });
-    expect(noAuth.status).toBe(403);
+    expect(noAuth.status).toBe(401);
 
     const badBody = await http.post(
       `${BACKEND_URL}/api/v1/livekit/present`,

@@ -33,10 +33,10 @@ describe("Websocket chat", () => {
   afterAll(() => {
     try {
       s1?.ws.close();
-    } catch { }
+    } catch {}
     try {
       s2?.ws.close();
-    } catch { }
+    } catch {}
   });
 
   function clearBuffers() {

@@ -71,6 +71,7 @@ services:
       <<: *app-environment
       NODE_ENV: production
       PORT: 3000
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-10}
       LIVEKIT_URL: ${LIVEKIT_PUBLIC_URL:-ws://localhost:7880}
       LIVEKIT_INTERNAL_URL: ws://host.docker.internal:7880
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
