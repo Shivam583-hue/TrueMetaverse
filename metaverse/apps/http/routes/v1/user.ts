@@ -45,7 +45,7 @@ userRouter.post("/metadata", userMiddleware, async (req, res) => {
   }
 });
 
-userRouter.get("/metadata/bulk", async (req, res) => {
+userRouter.get("/metadata/bulk", userMiddleware, async (req, res) => {
   const userIdString = Array.isArray(req.query.ids)
     ? req.query.ids.join(",")
     : String(req.query.ids ?? "");

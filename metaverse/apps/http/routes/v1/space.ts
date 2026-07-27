@@ -115,21 +115,26 @@ spaceRouter.get("/official", async (req, res) => {
   });
 });
 
-spaceRouter.get("/code/:code", roomCodeLimiter, async (req, res) => {
-  const space = await client.space.findUnique({
-    where: {
-      code: (req.params.code as string).toUpperCase(),
-    },
-    select: {
-      id: true,
-    },
-  });
-  if (!space) {
-    res.status(400).json({ message: "No room with that code" });
-    return;
-  }
-  res.json({ spaceId: space.id });
-});
+spaceRouter.get(
+  "/code/:code",
+  roomCodeLimiter,
+  userMiddleware,
+  async (req, res) => {
+    const space = await client.space.findUnique({
+      where: {
+        code: (req.params.code as string).toUpperCase(),
+      },
+      select: {
+        id: true,
+      },
+    });
+    if (!space) {
+      res.status(400).json({ message: "No room with that code" });
+      return;
+    }
+    res.json({ spaceId: space.id });
+  },
+);
 
 spaceRouter.delete("/:spaceId", userMiddleware, async (req, res) => {
   const space = await client.space.findUnique({
