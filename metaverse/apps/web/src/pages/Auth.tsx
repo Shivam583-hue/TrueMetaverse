@@ -148,8 +148,14 @@ export default function Auth({ mode }: { mode: "signin" | "signup" }) {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={isSignup ? "new-password" : "current-password"}
                 placeholder={isSignup ? "Choose a password" : "Your password"}
+                minLength={isSignup ? 10 : undefined}
                 required
               />
+              {isSignup && (
+                <span className="mt-1.5 font-mono text-[0.68rem] text-[#8e95bd]">
+                  At least 10 characters
+                </span>
+              )}
             </label>
 
             {error && (

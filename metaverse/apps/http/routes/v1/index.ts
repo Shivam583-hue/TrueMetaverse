@@ -19,7 +19,9 @@ const dummyHash = hash(randomBytes(32).toString("hex"));
 router.post("/signup", authLimiter, async (req, res) => {
   const parsedData = SignupSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Validation failed" });
+    res.status(400).json({
+      message: parsedData.error.issues[0]?.message ?? "Validation failed",
+    });
     return;
   }
 
