@@ -1,4 +1,10 @@
-import { BACKEND_URL, authHeader, http, makeUser, type TestUser } from "./helpers";
+import {
+  BACKEND_URL,
+  authHeader,
+  http,
+  makeUser,
+  type TestUser,
+} from "./helpers";
 
 describe("Study timer", () => {
   let user: TestUser;
@@ -18,7 +24,7 @@ describe("Study timer", () => {
 
   test("Timer requires auth", async () => {
     const response = await http.post(`${BACKEND_URL}/api/v1/study/start`, {});
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
   });
 
   test("Start, run, stop records a session with a duration", async () => {

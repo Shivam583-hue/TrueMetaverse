@@ -35,10 +35,10 @@ describe("Websocket movement", () => {
   afterAll(() => {
     try {
       s1?.ws.close();
-    } catch { }
+    } catch {}
     try {
       s2?.ws.close();
-    } catch { }
+    } catch {}
   });
 
   test("Leaving broadcasts a user-left event with identity", async () => {
