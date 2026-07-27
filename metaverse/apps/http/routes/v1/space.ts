@@ -2,6 +2,7 @@ import { Router } from "express";
 import client from "@repo/db/client";
 import { userMiddleware } from "../../middleware/user";
 import { CreateSpaceSchema } from "../../types";
+import { roomCodeLimiter } from "../../middleware/rateLimit";
 import { isWhiteboardEnabled } from "@repo/types";
 export const spaceRouter = Router();
 
@@ -114,7 +115,7 @@ spaceRouter.get("/official", async (req, res) => {
   });
 });
 
-spaceRouter.get("/code/:code", async (req, res) => {
+spaceRouter.get("/code/:code", roomCodeLimiter, async (req, res) => {
   const space = await client.space.findUnique({
     where: {
       code: (req.params.code as string).toUpperCase(),

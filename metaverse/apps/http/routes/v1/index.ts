@@ -8,10 +8,11 @@ import { hash, compare } from "../../scrypt";
 import client from "@repo/db/client";
 import jwt from "jsonwebtoken";
 import { JWT_ALGORITHM, JWT_PASSWORD } from "../../config";
+import { authLimiter } from "../../middleware/rateLimit";
 
 export const router = Router();
 
-router.post("/signup", async (req, res) => {
+router.post("/signup", authLimiter, async (req, res) => {
   const parsedData = SignupSchema.safeParse(req.body);
   if (!parsedData.success) {
     res.status(400).json({ message: "Validation failed" });
@@ -36,7 +37,7 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-router.post("/signin", async (req, res) => {
+router.post("/signin", authLimiter, async (req, res) => {
   const parsedData = SigninSchema.safeParse(req.body);
   if (!parsedData.success) {
     res.status(403).json({ message: "Validation failed" });
