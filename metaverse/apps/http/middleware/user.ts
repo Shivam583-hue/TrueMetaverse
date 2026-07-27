@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { JWT_PASSWORD } from "../config";
+import { JWT_ALGORITHM, JWT_PASSWORD } from "../config";
 import type { NextFunction, Request, Response } from "express";
 
 export const userMiddleware = (
@@ -16,7 +16,9 @@ export const userMiddleware = (
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_PASSWORD) as {
+    const decoded = jwt.verify(token, JWT_PASSWORD, {
+      algorithms: [JWT_ALGORITHM],
+    }) as {
       role: string;
       userId: string;
     };

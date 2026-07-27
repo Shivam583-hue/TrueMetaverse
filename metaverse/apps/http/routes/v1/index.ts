@@ -7,7 +7,7 @@ import { SigninSchema, SignupSchema } from "../../types";
 import { hash, compare } from "../../scrypt";
 import client from "@repo/db/client";
 import jwt from "jsonwebtoken";
-import { JWT_PASSWORD } from "../../config";
+import { JWT_ALGORITHM, JWT_PASSWORD } from "../../config";
 
 export const router = Router();
 
@@ -67,7 +67,7 @@ router.post("/signin", async (req, res) => {
         role: user.role,
       },
       JWT_PASSWORD,
-      { expiresIn: "7d" },
+      { expiresIn: "7d", algorithm: JWT_ALGORITHM },
     );
 
     res.json({

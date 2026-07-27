@@ -8,7 +8,7 @@ import {
 } from "@repo/types";
 import client from "@repo/db/client";
 import jwt, { type JwtPayload } from "jsonwebtoken";
-import { JWT_PASSWORD } from "./config";
+import { JWT_ALGORITHM, JWT_PASSWORD } from "./config";
 import {
   centerSpawn,
   isBlocked,
@@ -103,7 +103,11 @@ export class User {
   private async handleJoin(payload: Payload<"join">): Promise<void> {
     if (this.spaceId) return;
     const { spaceId, token } = payload;
-    const userId = (jwt.verify(token, JWT_PASSWORD) as JwtPayload).userId;
+    const userId = (
+      jwt.verify(token, JWT_PASSWORD, {
+        algorithms: [JWT_ALGORITHM],
+      }) as JwtPayload
+    ).userId;
     if (!userId) {
       this.ws.close();
       return;
