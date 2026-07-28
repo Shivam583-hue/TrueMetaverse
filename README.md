@@ -3,8 +3,8 @@
 > A self-hosted, realtime 2D world for studying, meeting, presenting, playing, and simply being together online.
 
 [![Live demo](https://img.shields.io/badge/live-metaverse.nemportfolio.in-2ea44f?style=flat-square&logo=googlechrome&logoColor=white)](https://metaverse.nemportfolio.in)
-[![Bun tests](https://img.shields.io/badge/Bun%20tests-31%2F31%20passing-2ea44f?style=flat-square&logo=bun&logoColor=white)](#testing)
-[![Tested-module coverage](https://img.shields.io/badge/tested--module%20coverage-87.45%25-3178c6?style=flat-square)](#engineering-scorecard)
+[![Bun tests](https://img.shields.io/badge/Bun%20tests-45%2F45%20passing-2ea44f?style=flat-square&logo=bun&logoColor=white)](#testing)
+[![Tested-module coverage](https://img.shields.io/badge/tested--module%20coverage-86.13%25-3178c6?style=flat-square)](#engineering-scorecard)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](#technology-stack)
 [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](#docker-setup)
 
@@ -131,7 +131,8 @@ TrueMetaverse/
 │   │       ├── RoomManager.ts       # Presence, broadcasts, rooms, and game state
 │   │       ├── collision.ts         # Server-side bounds and collision loading
 │   │       ├── hideSeekConfig.ts    # Map validation, concealment, and line of sight
-│   │       └── *.test.ts            # Authoritative game and map regression tests
+│   │       ├── heartbeat.ts         # Ping/pong liveness sweeps and dead-socket reaping
+│   │       └── *.test.ts            # Game, map, roster, and liveness regression tests
 │   │
 │   └── packages/                   # Shared workspace libraries
 │       ├── db/
@@ -149,6 +150,7 @@ TrueMetaverse/
     ├── helpers.ts                   # HTTP/WS clients and reusable test fixtures
     ├── auth.test.ts                 # Signup policy, uniform signin failures, token claims
     ├── wsAuth.test.ts               # WebSocket join token rejection and socket closure
+    ├── session.test.ts              # Roster lifecycle, ghost prevention, session replacement
     ├── rooms.test.ts                # Creation, codes, ownership, and deletion
     ├── movement.test.ts             # Join, movement, collision, and disconnects
     ├── chat.test.ts                 # Broadcast, validation, and rate limiting
@@ -225,19 +227,19 @@ Source, test, and coverage signals were measured on 27 July 2026 from the curren
 Build, bundle, and distribution figures are from the 15 July 2026 measurement and have not been re-run since.
 Bundle filenames are content-hashed and will change between builds.
 
-| Signal                       |                                    Current value | Scope and interpretation                                                                                                                                                           |
-| ---------------------------- | -----------------------------------------------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Physical source lines        |                        **9,618** across 86 files | TS, TSX, JS, JSX, CSS, and Prisma under `metaverse/apps` and `metaverse/packages`; dependencies, generated clients, build output, and the external integration suite are excluded. |
-| Automated scenarios          |                           **90** across 15 files | 31 Bun unit/regression scenarios plus 59 Jest integration scenarios.                                                                                                               |
-| Fast suite                   |                                **31/31 passing** | 105 assertions across player labels, map integrity, collision/visibility behavior, authoritative Hide & Seek rounds, JWT rejection paths, and rate limiting.                       |
-| Tested-module coverage       |                    **87% lines / 93% functions** | Bun coverage across the nine instrumented auth/realtime/game modules. This is not whole-repository coverage.                                                                       |
-| Production transform         |                                **2,445 modules** | Vite 7 production build; measured build time was 22.27 seconds on the development machine.                                                                                         |
-| Initial app shell            |           **332.29 kB minified / 96.67 kB gzip** | Entry JavaScript and CSS only: 270.88 kB JS + 61.41 kB CSS. Fonts, maps, images, and lazy features are excluded.                                                                   |
-| Representative lazy bundles  | **Arena 337.05 kB gzip; LiveKit 133.68 kB gzip** | Heavy collaboration features are loaded after the initial route. The largest shared whiteboard dependency is currently 741.39 kB gzip.                                             |
-| Complete static distribution |                                 **26.19 MB raw** | Includes application chunks, five map packages, character art, fonts, and other public assets.                                                                                     |
-| Hide & Seek room capacity    |                                 **3–12 players** | Enforced by the shipped game configuration.                                                                                                                                        |
-| Global concurrent users      |                            **Benchmark pending** | Production currently uses one in-memory WebSocket process. No responsible global concurrency claim should be published until WebSocket and LiveKit load tests are run together.    |
-| Production footprint         |                                 **1 × 8 GB VPS** | Seven long-running containers plus migration and seed jobs. PostgreSQL data is persisted in a Docker volume.                                                                       |
+| Signal                       |                                    Current value | Scope and interpretation                                                                                                                                                                                       |
+| ---------------------------- | -----------------------------------------------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Physical source lines        |                        **9,618** across 86 files | TS, TSX, JS, JSX, CSS, and Prisma under `metaverse/apps` and `metaverse/packages`; dependencies, generated clients, build output, and the external integration suite are excluded.                             |
+| Automated scenarios          |                          **108** across 18 files | 45 Bun unit/regression scenarios plus 63 Jest integration scenarios.                                                                                                                                           |
+| Fast suite                   |                                **45/45 passing** | 140 assertions across player labels, map integrity, collision/visibility behavior, authoritative Hide & Seek rounds, JWT rejection paths, rate limiting, connection liveness sweeps, and room roster eviction. |
+| Tested-module coverage       |                    **86% lines / 85% functions** | Bun coverage across the eleven instrumented auth/realtime/game modules. This is not whole-repository coverage.                                                                                                 |
+| Production transform         |                                **2,445 modules** | Vite 7 production build; measured build time was 22.27 seconds on the development machine.                                                                                                                     |
+| Initial app shell            |           **332.29 kB minified / 96.67 kB gzip** | Entry JavaScript and CSS only: 270.88 kB JS + 61.41 kB CSS. Fonts, maps, images, and lazy features are excluded.                                                                                               |
+| Representative lazy bundles  | **Arena 337.05 kB gzip; LiveKit 133.68 kB gzip** | Heavy collaboration features are loaded after the initial route. The largest shared whiteboard dependency is currently 741.39 kB gzip.                                                                         |
+| Complete static distribution |                                 **26.19 MB raw** | Includes application chunks, five map packages, character art, fonts, and other public assets.                                                                                                                 |
+| Hide & Seek room capacity    |                                 **3–12 players** | Enforced by the shipped game configuration.                                                                                                                                                                    |
+| Global concurrent users      |                            **Benchmark pending** | Production currently uses one in-memory WebSocket process. No responsible global concurrency claim should be published until WebSocket and LiveKit load tests are run together.                                |
+| Production footprint         |                                 **1 × 8 GB VPS** | Seven long-running containers plus migration and seed jobs. PostgreSQL data is persisted in a Docker volume.                                                                                                   |
 
 ## Technical highlights
 
@@ -247,6 +249,7 @@ Bundle filenames are content-hashed and will change between builds.
 - **Same-origin application gateway:** Nginx serves the SPA, forwards `/api/*` to Express, and upgrades `/socket` to the WebSocket service, avoiding browser CORS complexity.
 - **Independent media plane:** LiveKit carries audio, video, and screen-share media while application presence and gameplay remain on the WebSocket server.
 - **Defensive realtime inputs:** malformed frames are ignored, chat is rate-limited, whiteboard updates have element and byte limits, and metadata lookups are capped and batched.
+- **Self-healing presence:** a ping/pong heartbeat reaps connections that die without a close frame, a join that finishes after its socket closed is discarded instead of inserted, and opening a space a second time replaces the previous session rather than duplicating the avatar.
 - **Hardened credential handling:** signup enforces a length, commonness, and username-similarity policy; signin returns a single uniform failure so unknown usernames and wrong passwords are indistinguishable; scrypt comparison is constant-time and tolerates malformed stored hashes; tokens carry no role claim; and failed attempts are rate-limited per IP.
 - **Collision as data:** each map ships an explicit grid, allowing the client and server to apply the same movement boundaries.
 - **Reproducible containers:** one multi-stage Dockerfile produces separate HTTP, WebSocket, and Nginx images from the same frozen Bun lockfile.
@@ -337,27 +340,28 @@ This runs Express on port 3000, the WebSocket server on 3001, and Vite on 5173. 
 
 Copy `.env.example` to `.env` for local Docker development. Production secrets belong in `/opt/truemetaverse/.env.production` and must never be committed.
 
-| Variable                | Required                   | Purpose                                                                        |
-| ----------------------- | -------------------------- | ------------------------------------------------------------------------------ |
-| `POSTGRES_DB`           | Docker                     | Database name; defaults to `truemetaverse` locally                             |
-| `POSTGRES_USER`         | Docker                     | PostgreSQL role used by the application                                        |
-| `POSTGRES_PASSWORD`     | Production                 | PostgreSQL password; use a long random value                                   |
-| `POSTGRES_PORT`         | No                         | Local host port for PostgreSQL; defaults to `5433` in the full stack           |
-| `DATABASE_URL`          | Host processes             | Complete PostgreSQL connection string used by Prisma and `pg`                  |
-| `JWT_PASSWORD`          | Production                 | Secret used to sign seven-day application access tokens                        |
-| `AUTH_RATE_LIMIT_MAX`   | No                         | Failed signup/signin attempts allowed per IP per 15 minutes; defaults to `10`  |
-| `LIVEKIT_API_KEY`       | Media-enabled environments | Shared API key used by the HTTP service and LiveKit                            |
-| `LIVEKIT_API_SECRET`    | Media-enabled environments | Long shared secret used to sign LiveKit access tokens                          |
-| `LIVEKIT_PUBLIC_URL`    | Docker/production          | Browser-reachable signal URL, such as `wss://rtc.example.com`                  |
-| `LIVEKIT_URL`           | Direct app configuration   | Public LiveKit URL used when Compose is not translating `LIVEKIT_PUBLIC_URL`   |
-| `LIVEKIT_INTERNAL_URL`  | No                         | Server-to-server LiveKit address; defaults to `LIVEKIT_URL` outside Compose    |
-| `HTTP_PORT`             | No                         | Local exposed API port; defaults to `3000`                                     |
-| `WS_PORT`               | No                         | Local exposed WebSocket port; defaults to `3001`                               |
-| `WEB_PORT`              | No                         | Local exposed web port; defaults to `5173`                                     |
-| `PORT`                  | Service-level              | Internal HTTP or WebSocket listen port; supplied by Compose                    |
-| `VITE_WS_URL`           | No                         | Explicit browser WebSocket URL; same-origin `/socket` is the default           |
-| `VITE_API_PROXY_TARGET` | No                         | Vite development proxy target for `/api`; defaults to `http://localhost:3000`  |
-| `VITE_WS_PROXY_TARGET`  | No                         | Vite development proxy target for `/socket`; defaults to `ws://localhost:3001` |
+| Variable                   | Required                   | Purpose                                                                                                                                 |
+| -------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `POSTGRES_DB`              | Docker                     | Database name; defaults to `truemetaverse` locally                                                                                      |
+| `POSTGRES_USER`            | Docker                     | PostgreSQL role used by the application                                                                                                 |
+| `POSTGRES_PASSWORD`        | Production                 | PostgreSQL password; use a long random value                                                                                            |
+| `POSTGRES_PORT`            | No                         | Local host port for PostgreSQL; defaults to `5433` in the full stack                                                                    |
+| `DATABASE_URL`             | Host processes             | Complete PostgreSQL connection string used by Prisma and `pg`                                                                           |
+| `JWT_PASSWORD`             | Production                 | Secret used to sign seven-day application access tokens                                                                                 |
+| `AUTH_RATE_LIMIT_MAX`      | No                         | Failed signup/signin attempts allowed per IP per 15 minutes; defaults to `10`                                                           |
+| `WS_HEARTBEAT_INTERVAL_MS` | No                         | WebSocket ping interval; unanswered clients are dropped on the next sweep, so detection takes one to two intervals. Defaults to `30000` |
+| `LIVEKIT_API_KEY`          | Media-enabled environments | Shared API key used by the HTTP service and LiveKit                                                                                     |
+| `LIVEKIT_API_SECRET`       | Media-enabled environments | Long shared secret used to sign LiveKit access tokens                                                                                   |
+| `LIVEKIT_PUBLIC_URL`       | Docker/production          | Browser-reachable signal URL, such as `wss://rtc.example.com`                                                                           |
+| `LIVEKIT_URL`              | Direct app configuration   | Public LiveKit URL used when Compose is not translating `LIVEKIT_PUBLIC_URL`                                                            |
+| `LIVEKIT_INTERNAL_URL`     | No                         | Server-to-server LiveKit address; defaults to `LIVEKIT_URL` outside Compose                                                             |
+| `HTTP_PORT`                | No                         | Local exposed API port; defaults to `3000`                                                                                              |
+| `WS_PORT`                  | No                         | Local exposed WebSocket port; defaults to `3001`                                                                                        |
+| `WEB_PORT`                 | No                         | Local exposed web port; defaults to `5173`                                                                                              |
+| `PORT`                     | Service-level              | Internal HTTP or WebSocket listen port; supplied by Compose                                                                             |
+| `VITE_WS_URL`              | No                         | Explicit browser WebSocket URL; same-origin `/socket` is the default                                                                    |
+| `VITE_API_PROXY_TARGET`    | No                         | Vite development proxy target for `/api`; defaults to `http://localhost:3000`                                                           |
+| `VITE_WS_PROXY_TARGET`     | No                         | Vite development proxy target for `/socket`; defaults to `ws://localhost:3001`                                                          |
 
 A suitable local `.env` starts with:
 
@@ -463,7 +467,7 @@ bun test
 bun test --coverage
 ```
 
-Current result: **31 passing, 0 failing**, with **87.45% line coverage and 93.04% function coverage** across the nine modules loaded by this suite.
+Current result: **45 passing, 0 failing**, with **86.13% line coverage and 85.34% function coverage** across the eleven modules loaded by this suite.
 
 The fast suite covers:
 
@@ -474,6 +478,8 @@ The fast suite covers:
 - Non-empty player labels when user metadata arrives late
 - JWT request authentication: expired tokens, tampered payloads and signatures, foreign signing secrets, and algorithms outside the allowlist
 - Rate-limiter behavior, including `skipSuccessfulRequests` and the auth-limit override parser
+- Connection liveness: ping/pong sweeps, termination of unresponsive sockets, and the heartbeat interval override parser
+- Room roster eviction when the same account opens a second connection to the same space
 
 ### Jest cross-service integration suite
 
@@ -491,7 +497,7 @@ The suite deliberately drives failed signin and signup attempts, and `authLimite
 At the production default of `10` the counter survives the end of a run, so a second run inside the same window is throttled and roughly forty scenarios fail at once on a `429` from `signup`.
 Raising the override for local runs keeps the suite deterministic without weakening the shipped default.
 
-Current result: **59 passing, 0 failing, 59 total**, stable across repeated back-to-back runs. Authentication, catalog, rooms, metadata, chat, study, LiveKit, WebSocket authentication and leave, and malformed-frame scenarios pass. Four obsolete movement scenarios that targeted coordinates in the former `space-joined.users` shape have been removed; equivalent cross-service movement coverage should eventually be rewritten against `visibleUsers` and the current visibility protocol.
+Current result: **63 passing, 0 failing, 63 total**, stable across repeated back-to-back runs. Authentication, catalog, rooms, metadata, chat, study, LiveKit, WebSocket authentication and leave, room roster lifecycle, and malformed-frame scenarios pass. Four obsolete movement scenarios that targeted coordinates in the former `space-joined.users` shape have been removed; equivalent cross-service movement coverage should eventually be rewritten against `visibleUsers` and the current visibility protocol.
 
 Coverage shown in this README comes from Bun's instrumented fast suite. Jest integration coverage is not currently collected, so combining it into the coverage percentage would be misleading.
 
@@ -569,8 +575,9 @@ for local setup, architectural rules, testing expectations, and the pull-request
 
 - **No certified global concurrency figure:** the 8 GB production VPS has not undergone a combined WebSocket, WebRTC, and TURN load test. Hide & Seek is intentionally capped at 12 players per room; other rooms do not yet enforce a hard participant cap.
 - **Single WebSocket authority:** room, whiteboard, and active game state are held in one process. Restarting it clears ephemeral state, and horizontal replicas would diverge without shared state or deterministic room routing.
+- **Disconnect detection is not instant:** a connection that dies without a close frame is only removed once it misses a heartbeat, so a departure can take up to two `WS_HEARTBEAT_INTERVAL_MS` periods to broadcast. Rejoining the same space evicts the stale session immediately.
 - **Single-server failure domain:** the app, PostgreSQL, Redis, LiveKit, and local backups currently share one VPS. A host failure can affect every layer; backups should also be copied offsite.
-- **Movement integration coverage gap:** four obsolete scenarios were removed, leaving 48 of 48 integration scenarios green. Valid/rejected movement and collision bounds should be reintroduced using the current split between presence identities and `visibleUsers` coordinates.
+- **Movement integration coverage gap:** four obsolete scenarios were removed, leaving 63 of 63 integration scenarios green. Valid/rejected movement and collision bounds should be reintroduced using the current split between presence identities and `visibleUsers` coordinates.
 - **Large collaboration chunks:** the initial shell is compact, but the Excalidraw/diagram dependency graph produces a 741.39 kB gzip shared lazy chunk. More granular whiteboard code splitting would improve first-open latency on slow devices.
 - **JWT storage:** seven-day bearer tokens are stored in browser `localStorage`. Moving to secure, `HttpOnly`, same-site cookies would reduce token exposure during a successful XSS attack.
 - **Local LiveKit favors Linux:** the development configuration uses host networking and is less portable to Docker environments without equivalent host-network support.
