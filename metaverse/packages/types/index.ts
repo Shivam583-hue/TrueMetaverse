@@ -80,6 +80,9 @@ export type ChatMessage = {
   at: number;
 };
 
+export const WS_CLOSE_UNAUTHORIZED = 4001;
+export const WS_CLOSE_SESSION_REPLACED = 4002;
+
 export type IncomingMessage =
   | { type: "join"; payload: { spaceId: string; token: string } }
   | { type: "move"; payload: { x: number; y: number } }

@@ -1,14 +1,15 @@
 import { randomInt } from "crypto";
-import type {
-  ChatMessage,
-  HideSeekParticipant,
-  HideSeekPlayerStatus,
-  HideSeekRole,
-  HideSeekRoundState,
-  HideSeekWinner,
-  OutgoingMessage,
-  SpaceUser,
-  WhiteboardScene,
+import {
+  WS_CLOSE_SESSION_REPLACED,
+  type ChatMessage,
+  type HideSeekParticipant,
+  type HideSeekPlayerStatus,
+  type HideSeekRole,
+  type HideSeekRoundState,
+  type HideSeekWinner,
+  type OutgoingMessage,
+  type SpaceUser,
+  type WhiteboardScene,
 } from "@repo/types";
 import type { User } from "./User";
 import type { CollisionData } from "./collision";
@@ -91,6 +92,18 @@ export class RoomManager {
         status: "spectator",
       });
     game.hostId = this.chooseHost(spaceId, game)?.id ?? user.id;
+  }
+
+  public evictPreviousSessions(spaceId: string, joining: User): number {
+    if (!joining.userId) return 0;
+    const stale = (this.rooms.get(spaceId) ?? []).filter(
+      (candidate) =>
+        candidate.userId === joining.userId && candidate.id !== joining.id,
+    );
+    for (const session of stale) {
+      session.evict(WS_CLOSE_SESSION_REPLACED, "session replaced");
+    }
+    return stale.length;
   }
 
   public announceJoined(user: User, spaceId: string): void {

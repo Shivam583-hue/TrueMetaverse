@@ -177,12 +177,20 @@ export default function Arena() {
           </div>
         )}
         {conn.status !== "live" && (
-          <span className={`${hudChipClass} font-mono text-xs`}>
+          <span
+            className={cx(
+              hudChipClass,
+              "font-mono text-xs",
+              conn.status === "replaced" && "text-alert",
+            )}
+          >
             {conn.status === "connecting"
               ? "connecting..."
               : conn.status === "closed"
                 ? "disconnected"
-                : "error"}
+                : conn.status === "replaced"
+                  ? "opened in another tab"
+                  : "error"}
           </span>
         )}
       </div>

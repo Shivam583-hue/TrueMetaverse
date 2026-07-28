@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { RefObject } from "react";
 import type Phaser from "phaser";
-import type { HideSeekRoundState, WhiteboardScene } from "@repo/types";
+import {
+  WS_CLOSE_SESSION_REPLACED,
+  type HideSeekRoundState,
+  type WhiteboardScene,
+} from "@repo/types";
 import { api } from "../lib/api";
 import type { Session } from "../lib/auth";
 import { ArenaSocket } from "../lib/ws";
@@ -21,7 +25,8 @@ import type { ChatEntry } from "./useArenaChat";
 
 export type UserMeta = { username: string | null; appearance: WokaAppearance };
 
-export type ConnectionStatus = "connecting" | "live" | "closed" | "error";
+export type ConnectionStatus =
+  "connecting" | "live" | "closed" | "replaced" | "error";
 
 export function useArenaConnection({
   spaceId,
@@ -231,7 +236,8 @@ export function useArenaConnection({
         },
         "hide-seek-error": (payload) => setHideSeekError(payload.message),
       },
-      () => setStatus("closed"),
+      (code) =>
+        setStatus(code === WS_CLOSE_SESSION_REPLACED ? "replaced" : "closed"),
     );
     socketRef.current = socket;
 
