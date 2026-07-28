@@ -18,7 +18,7 @@ export function useSpaceMusic(url: string | null): {
     audio.volume = 0.5;
     setMuted(false);
 
-    const play = () => audio.play().catch(() => { });
+    const play = () => audio.play().catch(() => {});
     play();
 
     const onInteract = () => {
@@ -43,7 +43,7 @@ export function useSpaceMusic(url: string | null): {
     const next = !audio.muted;
     audio.muted = next;
     setMuted(next);
-    if (!next) audio.play().catch(() => { });
+    if (!next) audio.play().catch(() => {});
   }, []);
 
   return { audioRef, muted, toggleMute, hasMusic: !!url };

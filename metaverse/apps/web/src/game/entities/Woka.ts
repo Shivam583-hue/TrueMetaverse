@@ -10,7 +10,12 @@ import {
 import { COLS, FRAME_H, FRAME_W, WALK_COLS } from "../woka/wokaRender";
 import { CHARACTER_HEIGHT_TILES } from "./Player";
 
-const DIR_ROW: Record<Direction, number> = { down: 0, left: 1, right: 2, up: 3 };
+const DIR_ROW: Record<Direction, number> = {
+  down: 0,
+  left: 1,
+  right: 2,
+  up: 3,
+};
 const WALK_FRAME_RATE = 8;
 
 function ensureAnimations(scene: Phaser.Scene, texKey: string): void {
@@ -40,7 +45,11 @@ export class Woka extends Phaser.GameObjects.Container {
   private walking = false;
   private buildToken = 0;
 
-  constructor(scene: Phaser.Scene, tileSize: number, appearance?: WokaAppearance) {
+  constructor(
+    scene: Phaser.Scene,
+    tileSize: number,
+    appearance?: WokaAppearance,
+  ) {
     super(scene, 0, 0);
     this.appearance = normalizeAppearance(appearance);
     this.setScale((CHARACTER_HEIGHT_TILES * tileSize) / FRAME_H);
@@ -102,9 +111,7 @@ export class Woka extends Phaser.GameObjects.Container {
     for (const w of wanted) {
       if (!this.scene.textures.exists(w.url)) continue;
       ensureAnimations(this.scene, w.url);
-      const sprite = this.scene.add
-        .sprite(0, 0, w.url, idle)
-        .setOrigin(0.5, 1);
+      const sprite = this.scene.add.sprite(0, 0, w.url, idle).setOrigin(0.5, 1);
       this.add(sprite);
       this.layerSprites.push({ layer: w.layer, url: w.url, sprite });
     }

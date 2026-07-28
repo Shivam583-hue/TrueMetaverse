@@ -3,6 +3,8 @@ import { RoomManager } from "./RoomManager";
 import {
   isHideAndSeekEnabled,
   isWhiteboardEnabled,
+  WS_CLOSE_SESSION_REPLACED,
+  WS_CLOSE_UNAUTHORIZED,
   type IncomingMessage,
   type OutgoingMessage,
 } from "@repo/types";
@@ -18,7 +20,6 @@ import {
 import { loadHideSeekConfig } from "./hideSeekConfig";
 import z from "zod";
 
-const WS_CLOSE_UNAUTHORIZED = 4001;
 const JOIN_TIMEOUT_MS = 10_000;
 const JoinPayloadSchema = z.object({
   spaceId: z.string().min(1).max(64),
@@ -60,9 +61,15 @@ export class User {
   private ws: WebSocket;
   private chatTimestamps: number[] = [];
   private joinTimeout: ReturnType<typeof setTimeout> | undefined;
+  private joining = false;
+  private closed = false;
 
   public get joinedSpaceId(): string | undefined {
     return this.spaceId;
+  }
+
+  public get isClosed(): boolean {
+    return this.closed;
   }
 
   constructor(ws: WebSocket) {
@@ -119,7 +126,16 @@ export class User {
   }
 
   private async handleJoin(payload: Payload<"join">): Promise<void> {
-    if (this.spaceId) return;
+    if (this.spaceId || this.joining || this.closed) return;
+    this.joining = true;
+    try {
+      await this.join(payload);
+    } finally {
+      this.joining = false;
+    }
+  }
+
+  private async join(payload: Payload<"join">): Promise<void> {
     const parsed = JoinPayloadSchema.safeParse(payload);
     if (!parsed.success) {
       this.ws.close(WS_CLOSE_UNAUTHORIZED, "unauthorized");
@@ -143,6 +159,7 @@ export class User {
     this.userId = userId;
 
     const space = await client.space.findFirst({ where: { id: spaceId } });
+    if (this.closed) return;
     if (!space) {
       this.ws.close();
       return;
@@ -177,6 +194,7 @@ export class User {
       this.ws.close();
       return;
     }
+    RoomManager.getInstance().evictPreviousSessions(spaceId, this);
     RoomManager.getInstance().addUser(spaceId, this, {
       hideSeekConfig,
       collision: this.collision,
@@ -290,7 +308,14 @@ export class User {
     );
   }
 
+  public evict(code: number, reason: string): void {
+    this.destroy();
+    this.ws.close(code, reason);
+  }
+
   destroy() {
+    if (this.closed) return;
+    this.closed = true;
     this.clearJoinTimeout();
     if (!this.spaceId || !this.userId) return;
     RoomManager.getInstance().removeUser(this, this.spaceId);

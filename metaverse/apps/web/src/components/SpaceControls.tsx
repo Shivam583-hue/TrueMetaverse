@@ -50,11 +50,7 @@ export default function SpaceControls() {
       aria-label="Map zoom"
       role="group"
     >
-      <ZoomButton
-        label="Zoom out"
-        event={SpaceEvent.ZoomOut}
-        path="M4 10h12"
-      />
+      <ZoomButton label="Zoom out" event={SpaceEvent.ZoomOut} path="M4 10h12" />
       <ZoomButton
         label="Zoom in"
         event={SpaceEvent.ZoomIn}
@@ -122,8 +118,7 @@ export function MobileJoystick() {
       publishDirection(null);
       const knob = knobRef.current;
       if (!knob) return;
-      knob.style.transition =
-        "transform 150ms cubic-bezier(0.23, 1, 0.32, 1)";
+      knob.style.transition = "transform 150ms cubic-bezier(0.23, 1, 0.32, 1)";
       knob.style.transform = "translate3d(0, 0, 0)";
     },
     [publishDirection],
@@ -199,16 +194,28 @@ export function MobileJoystick() {
         onPointerUp={handlePointerEnd}
         onLostPointerCapture={(event) => reset(event.pointerId)}
       >
-        <span aria-hidden="true" className="absolute left-3 text-xs text-fog/65">
+        <span
+          aria-hidden="true"
+          className="absolute left-3 text-xs text-fog/65"
+        >
           ←
         </span>
-        <span aria-hidden="true" className="absolute right-3 text-xs text-fog/65">
+        <span
+          aria-hidden="true"
+          className="absolute right-3 text-xs text-fog/65"
+        >
           →
         </span>
-        <span aria-hidden="true" className="absolute top-2.5 text-xs text-fog/65">
+        <span
+          aria-hidden="true"
+          className="absolute top-2.5 text-xs text-fog/65"
+        >
           ↑
         </span>
-        <span aria-hidden="true" className="absolute bottom-2.5 text-xs text-fog/65">
+        <span
+          aria-hidden="true"
+          className="absolute bottom-2.5 text-xs text-fog/65"
+        >
           ↓
         </span>
         <span

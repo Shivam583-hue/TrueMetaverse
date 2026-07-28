@@ -17,7 +17,7 @@ export class ArenaSocket {
 
   constructor(
     private handlers: Handlers,
-    onClose?: () => void,
+    onClose?: (code: number) => void,
   ) {
     this.ws = new WebSocket(WS_URL);
     this.ws.onopen = () => {
@@ -30,9 +30,9 @@ export class ArenaSocket {
       const handler = this.handlers[message.type];
       (handler as ((p: unknown) => void) | undefined)?.(message.payload);
     };
-    this.ws.onclose = () => {
+    this.ws.onclose = (event) => {
       this.open = false;
-      onClose?.();
+      onClose?.(event.code);
     };
   }
 

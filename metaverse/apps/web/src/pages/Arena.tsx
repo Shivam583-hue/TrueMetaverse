@@ -19,7 +19,14 @@ import WhiteboardDialog from "../components/WhiteboardDialog";
 import HideSeekHud, {
   hideSeekMovementBlocked,
 } from "../components/HideSeekHud";
-import { button, cx, hudBaseClass, hudChipClass, inputClass } from "../lib/ui";
+import {
+  button,
+  cx,
+  hudBaseClass,
+  hudChipAlertClass,
+  hudChipClass,
+  inputClass,
+} from "../lib/ui";
 
 const floatingPanelClass =
   "rounded-xl border border-line bg-[#111326e8] shadow-[0_12px_34px_#05061188] backdrop-blur-md";
@@ -177,12 +184,19 @@ export default function Arena() {
           </div>
         )}
         {conn.status !== "live" && (
-          <span className={`${hudChipClass} font-mono text-xs`}>
+          <span
+            className={cx(
+              conn.status === "replaced" ? hudChipAlertClass : hudChipClass,
+              "font-mono text-xs",
+            )}
+          >
             {conn.status === "connecting"
               ? "connecting..."
               : conn.status === "closed"
                 ? "disconnected"
-                : "error"}
+                : conn.status === "replaced"
+                  ? "opened in another tab"
+                  : "error"}
           </span>
         )}
       </div>
@@ -351,12 +365,10 @@ export default function Arena() {
           </span>
         )}
         {video.shareError && (
-          <span className={`${hudChipClass} text-alert`}>
-            {video.shareError}
-          </span>
+          <span className={hudChipAlertClass}>{video.shareError}</span>
         )}
         {conn.errorText ? (
-          <span className={`${hudChipClass} text-alert`}>
+          <span className={hudChipAlertClass}>
             {conn.errorText} <Link to="/">Back to rooms</Link>
           </span>
         ) : (
