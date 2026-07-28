@@ -35,3 +35,4 @@ export const modalActionsClass =
 export const hudBaseClass = "absolute z-[5] flex items-center gap-2";
 export const hudChipClass =
   "min-w-0 max-w-[min(32rem,calc(100vw-1.8rem))] rounded-lg border border-line bg-[#14162bd9] px-3 py-1.5 text-sm text-moonlight shadow-sm backdrop-blur-md";
+export const hudChipAlertClass = `${hudChipClass} text-alert!`;
