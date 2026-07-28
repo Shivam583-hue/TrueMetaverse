@@ -27,7 +27,7 @@ export function useStudyTimer(
           setStartedAt(new Date(res.activeSession.startedAt).getTime());
         }
       })
-      .catch(() => { });
+      .catch(() => {});
 
     const stopOnLeave = () => {
       if (startedAtRef.current !== null) {
@@ -36,7 +36,7 @@ export function useStudyTimer(
           method: "POST",
           keepalive: true,
           headers: { Authorization: `Bearer ${token}` },
-        }).catch(() => { });
+        }).catch(() => {});
       }
     };
     window.addEventListener("pagehide", stopOnLeave);
@@ -69,7 +69,7 @@ export function useStudyTimer(
       setStartedAt(new Date(res.startedAt).getTime());
     } else {
       setStartedAt(null);
-      await api.study.stop().catch(() => { });
+      await api.study.stop().catch(() => {});
     }
   }, [startedAt, spaceId]);
 

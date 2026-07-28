@@ -1,12 +1,7 @@
 import { WOKA_ASSET_BASE, WOKA_FILES } from "./wokaAssets";
 
 export type WokaLayer =
-  | "body"
-  | "eyes"
-  | "hair"
-  | "clothes"
-  | "hat"
-  | "accessory";
+  "body" | "eyes" | "hair" | "clothes" | "hat" | "accessory";
 
 export const DRAW_ORDER: WokaLayer[] = [
   "body",
@@ -85,7 +80,10 @@ export function normalizeAppearance(raw: unknown): WokaAppearance {
   if (raw && typeof raw === "object") {
     for (const def of WOKA_LAYERS) {
       const value = (raw as Record<string, unknown>)[def.layer];
-      if (typeof value === "string" && def.options.some((o) => o.id === value)) {
+      if (
+        typeof value === "string" &&
+        def.options.some((o) => o.id === value)
+      ) {
         out[def.layer] = value;
       }
     }
