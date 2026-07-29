@@ -218,15 +218,51 @@ Documentation-only changes do not require the complete runtime suite, but format
 
 ## Commit and pull-request guidelines
 
-Write concise, imperative commit subjects that describe the outcome:
+### Commit messages
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+Write every subject as `type(scope): summary`:
 
 ```text
-Fix late player metadata labels
-Add collision connectivity regression test
-Document LiveKit TURN ports
+fix(ws): close socket on failed join authentication
+feat(http): add rate limiting and security headers
+refactor(auth): remove unused admin role from tokens and session
+test(auth): add integration tests for all refactors
+docs(readme): update number of tests
+chore(docker): add auth ratelimit to production env
 ```
 
+The types currently in use are:
+
+| Type | Use for |
+| --- | --- |
+| `feat` | A new user-facing or protocol-level capability. |
+| `fix` | A correction to broken, missing, or unsafe behavior. |
+| `refactor` | Internal restructuring with no intended behavior change. |
+| `test` | Test-only additions or changes. |
+| `docs` | Documentation, README, or comment-only changes. |
+| `chore` | Build, dependency, container, or configuration maintenance. |
+
+`perf`, `build`, and `ci` are also acceptable when a change genuinely calls for them.
+
+The scope names the area the change lands in, such as `auth`, `http`, `ws`, `web`, `db`, `types`, `ui`, `docker`, `deploy`, or `readme`.
+Prefer the narrower area when a change touches one concern inside a larger app.
+Omit the scope only when the change is repository-wide.
+
+Subject rules:
+
+- Use the imperative mood: `add`, `fix`, `remove`, not `added`, `fixes`, `removing`.
+- Keep the text after the colon lowercase and under roughly 72 characters.
+- Do not end the subject with a period.
+- Describe the outcome, not the files you touched.
+
 Avoid vague subjects such as `updates`, `fix stuff`, or `changes`.
+
+Add a body only when the reasoning is not obvious from the subject.
+Separate it from the subject with a blank line and explain why the change was made rather than what the diff already shows.
+Put issue references such as `Closes #123` on their own line at the end of the message.
+
+### Pull requests
 
 A good pull request includes:
 

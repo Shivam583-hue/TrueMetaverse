@@ -1,4 +1,4 @@
-tmp/
+doc/
 .env
 .env.*
 !.env.example
