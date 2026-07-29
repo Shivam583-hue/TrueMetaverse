@@ -96,7 +96,7 @@ export default function Arena() {
       await navigator.clipboard.writeText(conn.spaceCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch { }
+    } catch {}
   }, [conn.spaceCode]);
 
   const onlineEntries = Object.entries(conn.online);
@@ -316,7 +316,7 @@ export default function Arena() {
               button.ghost,
               "bg-midnight/85 px-3 text-xs sm:text-sm",
               timer.startedAt !== null &&
-              "border-alert bg-alert/15 text-[#ff9aaa]",
+                "border-alert bg-alert/15 text-[#ff9aaa]",
             )}
             onClick={timer.toggle}
           >
@@ -411,8 +411,8 @@ export default function Arena() {
               {chat.messages.length === 0 ? (
                 <div className="py-3 text-center text-xs leading-relaxed text-fog">
                   {conn.hideSeekState &&
-                    (conn.hideSeekState.phase === "hiding" ||
-                      conn.hideSeekState.phase === "seeking")
+                  (conn.hideSeekState.phase === "hiding" ||
+                    conn.hideSeekState.phase === "seeking")
                     ? "During a round, chat is private to active hiders."
                     : "Say hi to the room. Messages are visible to everyone here."}
                 </div>
