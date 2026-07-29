@@ -10,7 +10,7 @@ const buttonBase =
 export const button = {
   base: buttonBase,
   primary: `${buttonBase} bg-coin text-[#201800] shadow-[0_3px_0_var(--color-coin-deep)] active:translate-y-0.5 active:shadow-[0_1px_0_var(--color-coin-deep)]`,
-  ghost: `${buttonBase} border-line-strong text-fog hover:border-[#4a4f8a] hover:text-moonlight`,
+  ghost: `${buttonBase} border-line-strong bg-transparent text-fog hover:border-[#4a4f8a] hover:text-moonlight`,
   danger: `${buttonBase} border-alert bg-transparent text-alert hover:bg-alert/10`,
   dangerSolid: `${buttonBase} border-alert bg-alert text-[#2a0a10] shadow-[0_3px_0_#c14257] active:translate-y-0.5 active:shadow-[0_1px_0_#c14257]`,
 } as const;
