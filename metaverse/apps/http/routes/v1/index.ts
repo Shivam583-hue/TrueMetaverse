@@ -9,7 +9,6 @@ import client, { isUniqueConstraintViolation } from "@repo/db/client";
 import jwt from "jsonwebtoken";
 import { JWT_ALGORITHM, JWT_PASSWORD } from "../../config";
 import { authLimiter } from "../../middleware/rateLimit";
-import { logger } from "../../logger";
 import { randomBytes } from "node:crypto";
 
 export const router = Router();
@@ -44,7 +43,7 @@ router.post("/signup", authLimiter, async (req, res) => {
       res.status(400).json({ message: "User already exists" });
       return;
     }
-    logger.error(
+    req.log.error(
       { err, username: parsedData.data.username },
       "signup failed for a reason other than a taken username",
     );
@@ -90,7 +89,7 @@ router.post("/signin", authLimiter, async (req, res) => {
       token,
     });
   } catch (err) {
-    logger.error(
+    req.log.error(
       { err, username: parsedData.data.username },
       "signin failed unexpectedly",
     );

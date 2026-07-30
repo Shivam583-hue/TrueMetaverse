@@ -186,7 +186,7 @@ livekitRouter.post("/present/release", userMiddleware, async (req, res) => {
   try {
     await setSources(space.id, identity, DEFAULT_SOURCES);
   } catch (err) {
-    logger.warn(
+    req.log.warn(
       { err, spaceId: space.id, identity },
       "could not revoke screen share grant, participant has probably already left",
     );

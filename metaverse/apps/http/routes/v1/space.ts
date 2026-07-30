@@ -3,7 +3,6 @@ import client, { isUniqueConstraintViolation } from "@repo/db/client";
 import { userMiddleware } from "../../middleware/user";
 import { CreateSpaceSchema } from "../../types";
 import { roomCodeLimiter } from "../../middleware/rateLimit";
-import { logger } from "../../logger";
 import { isWhiteboardEnabled } from "@repo/types";
 export const spaceRouter = Router();
 
@@ -72,20 +71,17 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
       return;
     } catch (err) {
       if (!isUniqueConstraintViolation(err)) {
-        logger.error(
-          { err, userId: req.userId, mapId: parsedData.data.mapId },
+        req.log.error(
+          { err, mapId: parsedData.data.mapId },
           "space creation failed",
         );
         res.status(500).json({ message: "Could not create space" });
         return;
       }
-      logger.debug({ attempt }, "retrying space creation after a code clash");
+      req.log.debug({ attempt }, "retrying space creation after a code clash");
     }
   }
-  logger.error(
-    { userId: req.userId },
-    "gave up generating a unique space code after 3 attempts",
-  );
+  req.log.error("gave up generating a unique space code after 3 attempts");
   res.status(500).json({ message: "Could not create space" });
 });
 

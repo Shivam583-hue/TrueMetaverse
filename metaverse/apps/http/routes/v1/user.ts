@@ -5,7 +5,6 @@ import client, {
   isRecordNotFound,
 } from "@repo/db/client";
 import { userMiddleware } from "../../middleware/user";
-import { logger } from "../../logger";
 
 export const userRouter = Router();
 
@@ -22,10 +21,7 @@ userRouter.post("/woka", userMiddleware, async (req, res) => {
     });
     res.json({ message: "Appearance updated" });
   } catch (err) {
-    logger.error(
-      { err, userId: req.userId },
-      "failed to update woka appearance",
-    );
+    req.log.error({ err }, "failed to update woka appearance");
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -51,10 +47,7 @@ userRouter.post("/metadata", userMiddleware, async (req, res) => {
       res.status(400).json({ message: "Unknown avatar" });
       return;
     }
-    logger.error(
-      { err, userId: req.userId },
-      "failed to update avatar metadata",
-    );
+    req.log.error({ err }, "failed to update avatar metadata");
     res.status(500).json({ message: "Internal server error" });
   }
 });

@@ -1,4 +1,5 @@
 import z from "zod";
+import type { Logger } from "@repo/logger";
 import { COMMON_PASSWORDS } from "../commonPasswords";
 
 export const SignupSchema = z
@@ -73,6 +74,8 @@ declare global {
   namespace Express {
     export interface Request {
       userId?: string;
+      id: string;
+      log: Logger;
     }
   }
 }
