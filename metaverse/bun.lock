@@ -14,6 +14,7 @@
       "name": "@repo/http",
       "dependencies": {
         "@repo/db": "*",
+        "@repo/lifecycle": "*",
         "@repo/logger": "*",
         "@repo/types": "*",
         "@types/express": "^5.0.6",
@@ -58,6 +59,7 @@
       "name": "@repo/ws",
       "dependencies": {
         "@repo/db": "*",
+        "@repo/lifecycle": "*",
         "@repo/logger": "*",
         "@repo/types": "*",
         "jsonwebtoken": "^9.0.3",
@@ -105,6 +107,18 @@
         "globals": "^16.5.0",
         "typescript": "^5.9.2",
         "typescript-eslint": "^8.50.0",
+      },
+    },
+    "packages/lifecycle": {
+      "name": "@repo/lifecycle",
+      "dependencies": {
+        "@repo/logger": "*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5.0.0",
       },
     },
     "packages/logger": {
@@ -429,6 +443,8 @@
     "@repo/eslint-config": ["@repo/eslint-config@workspace:packages/eslint-config"],
 
     "@repo/http": ["@repo/http@workspace:apps/http"],
+
+    "@repo/lifecycle": ["@repo/lifecycle@workspace:packages/lifecycle"],
 
     "@repo/logger": ["@repo/logger@workspace:packages/logger"],
 

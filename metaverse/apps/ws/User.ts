@@ -3,7 +3,6 @@ import { RoomManager } from "./RoomManager";
 import {
   isHideAndSeekEnabled,
   isWhiteboardEnabled,
-  WS_CLOSE_SESSION_REPLACED,
   WS_CLOSE_UNAUTHORIZED,
   type IncomingMessage,
   type OutgoingMessage,

@@ -80,6 +80,7 @@ export type ChatMessage = {
   at: number;
 };
 
+export const WS_CLOSE_GOING_AWAY = 1001;
 export const WS_CLOSE_UNAUTHORIZED = 4001;
 export const WS_CLOSE_SESSION_REPLACED = 4002;
 

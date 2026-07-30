@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@repo/db": "*",
+    "@repo/lifecycle": "*",
     "@repo/logger": "*",
     "@repo/types": "*",
     "@types/express": "^5.0.6",

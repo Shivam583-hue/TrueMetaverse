@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@repo/db": "*",
+    "@repo/lifecycle": "*",
     "@repo/logger": "*",
     "@repo/types": "*",
     "jsonwebtoken": "^9.0.3",
