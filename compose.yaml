@@ -7,6 +7,7 @@ x-app-build: &app-build
 x-app-environment: &app-environment
   DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-local-postgres-password}@db:5432/${POSTGRES_DB:-truemetaverse}
   JWT_PASSWORD: ${JWT_PASSWORD:-local-development-jwt-secret-change-me}
+  LOG_LEVEL: ${LOG_LEVEL:-debug}
 
 services:
   db:
