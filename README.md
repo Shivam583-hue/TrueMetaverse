@@ -3,8 +3,8 @@
 > A self-hosted, realtime 2D world for studying, meeting, presenting, playing, and simply being together online.
 
 [![Live demo](https://img.shields.io/badge/live-metaverse.nemportfolio.in-2ea44f?style=flat-square&logo=googlechrome&logoColor=white)](https://metaverse.nemportfolio.in)
-[![Bun tests](https://img.shields.io/badge/Bun%20tests-45%2F45%20passing-2ea44f?style=flat-square&logo=bun&logoColor=white)](#testing)
-[![Tested-module coverage](https://img.shields.io/badge/tested--module%20coverage-86.13%25-3178c6?style=flat-square)](#engineering-scorecard)
+[![Bun tests](https://img.shields.io/badge/Bun%20tests-82%2F82%20passing-2ea44f?style=flat-square&logo=bun&logoColor=white)](#testing)
+[![Tested-module coverage](https://img.shields.io/badge/tested--module%20coverage-88.17%25-3178c6?style=flat-square)](#engineering-scorecard)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](#technology-stack)
 [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](#docker-setup)
 
@@ -223,23 +223,24 @@ The frontend and WebSocket server intentionally share protocol types but not aut
 
 ## Engineering scorecard
 
-Source, test, and coverage signals were measured on 27 July 2026 from the current working tree.
+Test and coverage signals were measured on 30 July 2026 from the current working tree.
+Source line counts are from the 27 July 2026 measurement.
 Build, bundle, and distribution figures are from the 15 July 2026 measurement and have not been re-run since.
 Bundle filenames are content-hashed and will change between builds.
 
-| Signal                       |                                    Current value | Scope and interpretation                                                                                                                                                                                       |
-| ---------------------------- | -----------------------------------------------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Physical source lines        |                        **9,618** across 86 files | TS, TSX, JS, JSX, CSS, and Prisma under `metaverse/apps` and `metaverse/packages`; dependencies, generated clients, build output, and the external integration suite are excluded.                             |
-| Automated scenarios          |                          **108** across 18 files | 45 Bun unit/regression scenarios plus 63 Jest integration scenarios.                                                                                                                                           |
-| Fast suite                   |                                **45/45 passing** | 140 assertions across player labels, map integrity, collision/visibility behavior, authoritative Hide & Seek rounds, JWT rejection paths, rate limiting, connection liveness sweeps, and room roster eviction. |
-| Tested-module coverage       |                    **86% lines / 85% functions** | Bun coverage across the eleven instrumented auth/realtime/game modules. This is not whole-repository coverage.                                                                                                 |
-| Production transform         |                                **2,445 modules** | Vite 7 production build; measured build time was 22.27 seconds on the development machine.                                                                                                                     |
-| Initial app shell            |           **332.29 kB minified / 96.67 kB gzip** | Entry JavaScript and CSS only: 270.88 kB JS + 61.41 kB CSS. Fonts, maps, images, and lazy features are excluded.                                                                                               |
-| Representative lazy bundles  | **Arena 337.05 kB gzip; LiveKit 133.68 kB gzip** | Heavy collaboration features are loaded after the initial route. The largest shared whiteboard dependency is currently 741.39 kB gzip.                                                                         |
-| Complete static distribution |                                 **26.19 MB raw** | Includes application chunks, five map packages, character art, fonts, and other public assets.                                                                                                                 |
-| Hide & Seek room capacity    |                                 **3–12 players** | Enforced by the shipped game configuration.                                                                                                                                                                    |
-| Global concurrent users      |                            **Benchmark pending** | Production currently uses one in-memory WebSocket process. No responsible global concurrency claim should be published until WebSocket and LiveKit load tests are run together.                                |
-| Production footprint         |                                 **1 × 8 GB VPS** | Seven long-running containers plus migration and seed jobs. PostgreSQL data is persisted in a Docker volume.                                                                                                   |
+| Signal                       |                                    Current value | Scope and interpretation                                                                                                                                                                                                                                                                      |
+| ---------------------------- | -----------------------------------------------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Physical source lines        |                        **9,618** across 86 files | TS, TSX, JS, JSX, CSS, and Prisma under `metaverse/apps` and `metaverse/packages`; dependencies, generated clients, build output, and the external integration suite are excluded.                                                                                                            |
+| Automated scenarios          |                          **145** across 22 files | 82 Bun unit/regression scenarios plus 63 Jest integration scenarios.                                                                                                                                                                                                                          |
+| Fast suite                   |                                **82/82 passing** | 233 assertions across player labels, map integrity, collision/visibility behavior, authoritative Hide & Seek rounds, JWT rejection paths, rate limiting, connection liveness sweeps, room roster eviction, log redaction, request correlation, error classification, and shutdown sequencing. |
+| Tested-module coverage       |                    **88% lines / 89% functions** | Bun coverage across the seventeen instrumented auth/realtime/game/observability modules. This is not whole-repository coverage.                                                                                                                                                               |
+| Production transform         |                                **2,445 modules** | Vite 7 production build; measured build time was 22.27 seconds on the development machine.                                                                                                                                                                                                    |
+| Initial app shell            |           **332.29 kB minified / 96.67 kB gzip** | Entry JavaScript and CSS only: 270.88 kB JS + 61.41 kB CSS. Fonts, maps, images, and lazy features are excluded.                                                                                                                                                                              |
+| Representative lazy bundles  | **Arena 337.05 kB gzip; LiveKit 133.68 kB gzip** | Heavy collaboration features are loaded after the initial route. The largest shared whiteboard dependency is currently 741.39 kB gzip.                                                                                                                                                        |
+| Complete static distribution |                                 **26.19 MB raw** | Includes application chunks, five map packages, character art, fonts, and other public assets.                                                                                                                                                                                                |
+| Hide & Seek room capacity    |                                 **3–12 players** | Enforced by the shipped game configuration.                                                                                                                                                                                                                                                   |
+| Global concurrent users      |                            **Benchmark pending** | Production currently uses one in-memory WebSocket process. No responsible global concurrency claim should be published until WebSocket and LiveKit load tests are run together.                                                                                                               |
+| Production footprint         |                                 **1 × 8 GB VPS** | Seven long-running containers plus migration and seed jobs. PostgreSQL data is persisted in a Docker volume.                                                                                                                                                                                  |
 
 ## Technical highlights
 
@@ -467,7 +468,7 @@ bun test
 bun test --coverage
 ```
 
-Current result: **45 passing, 0 failing**, with **86.13% line coverage and 85.34% function coverage** across the eleven modules loaded by this suite.
+Current result: **82 passing, 0 failing**, with **88.17% line coverage and 89.34% function coverage** across the seventeen modules loaded by this suite.
 
 The fast suite covers:
 
@@ -480,6 +481,10 @@ The fast suite covers:
 - Rate-limiter behavior, including `skipSuccessfulRequests` and the auth-limit override parser
 - Connection liveness: ping/pong sweeps, termination of unresponsive sockets, and the heartbeat interval override parser
 - Room roster eviction when the same account opens a second connection to the same space
+- Log redaction of credentials, level resolution, and the `LOG_LEVEL` override parser
+- Request correlation: inbound id validation, rejection of ids that could corrupt a log line, and route templating
+- Error classification across `AppError`, Zod, body-parser failures, and unknown throwables, including the guarantee that internal messages never reach the client
+- Shutdown sequencing: step ordering, crash exit codes, per-step timeouts, and repeated signals
 
 ### Jest cross-service integration suite
 
@@ -497,7 +502,7 @@ The suite deliberately drives failed signin and signup attempts, and `authLimite
 At the production default of `10` the counter survives the end of a run, so a second run inside the same window is throttled and roughly forty scenarios fail at once on a `429` from `signup`.
 Raising the override for local runs keeps the suite deterministic without weakening the shipped default.
 
-Current result: **63 passing, 0 failing, 63 total**, stable across repeated back-to-back runs. Authentication, catalog, rooms, metadata, chat, study, LiveKit, WebSocket authentication and leave, room roster lifecycle, and malformed-frame scenarios pass. Four obsolete movement scenarios that targeted coordinates in the former `space-joined.users` shape have been removed; equivalent cross-service movement coverage should eventually be rewritten against `visibleUsers` and the current visibility protocol.
+Current result: **63 passing, 0 failing, 63 total** across 10 suites, stable across repeated back-to-back runs. Authentication, catalog, rooms, metadata, chat, study, LiveKit, WebSocket authentication and leave, room roster lifecycle, and malformed-frame scenarios pass. Four obsolete movement scenarios that targeted coordinates in the former `space-joined.users` shape have been removed; equivalent cross-service movement coverage should eventually be rewritten against `visibleUsers` and the current visibility protocol.
 
 Coverage shown in this README comes from Bun's instrumented fast suite. Jest integration coverage is not currently collected, so combining it into the coverage percentage would be misleading.
 
