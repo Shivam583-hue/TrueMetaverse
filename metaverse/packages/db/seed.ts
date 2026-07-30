@@ -1,4 +1,7 @@
 import client from "./client";
+import { createLogger } from "@repo/logger";
+
+const logger = createLogger({ service: "seed" });
 
 const avatars = [
   { name: "Wick", imageUrl: "/avatars/wick.png" },
@@ -68,7 +71,7 @@ async function main() {
     });
     if (existing) continue;
     await client.avatar.create({ data: avatar });
-    console.log(`avatar created: ${avatar.name}`);
+    logger.info({ avatar: avatar.name }, "avatar created");
   }
 
   const maps = new Map<string, Awaited<ReturnType<typeof client.map.create>>>();
@@ -82,7 +85,7 @@ async function main() {
           data: template,
         })
       : await client.map.create({ data: template });
-    console.log(`map ${existing ? "updated" : "created"}: ${map.name}`);
+    logger.info({ map: map.name, created: !existing }, "map upserted");
     maps.set(template.name, map);
   }
 
@@ -103,7 +106,7 @@ async function main() {
       where: { code: OFFICIAL_CODE },
       data: spaceData,
     });
-    console.log(`official space updated (code ${OFFICIAL_CODE})`);
+    logger.info({ code: OFFICIAL_CODE }, "official space updated");
   } else {
     let system = await client.user.findUnique({
       where: { username: "system" },
@@ -126,16 +129,16 @@ async function main() {
         creatorId: system.id,
       },
     });
-    console.log(`official space created (code ${OFFICIAL_CODE})`);
+    logger.info({ code: OFFICIAL_CODE }, "official space created");
   }
 }
 
 main()
   .then(() => {
-    console.log("seed complete");
+    logger.info("seed complete");
     process.exit(0);
   })
   .catch((e) => {
-    console.error(e);
+    logger.fatal({ err: e }, "seed failed");
     process.exit(1);
   });

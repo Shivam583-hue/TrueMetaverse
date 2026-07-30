@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import { router } from "./routes/v1";
 import { apiLimiter } from "./middleware/rateLimit";
+import { logger } from "./logger";
 
 const app = express();
 
@@ -16,5 +17,5 @@ app.use("/api/v1", apiLimiter, router);
 
 const port = Number(process.env.PORT ?? 3000);
 app.listen(port, () => {
-  console.log(`HTTP server listening on ${port}`);
+  logger.info({ port }, "http server listening");
 });

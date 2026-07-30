@@ -18,6 +18,8 @@ import {
   type CollisionData,
 } from "./collision";
 import { loadHideSeekConfig } from "./hideSeekConfig";
+import { logger } from "./logger";
+import type { Logger } from "@repo/logger";
 import z from "zod";
 
 const JOIN_TIMEOUT_MS = 10_000;
@@ -63,6 +65,7 @@ export class User {
   private joinTimeout: ReturnType<typeof setTimeout> | undefined;
   private joining = false;
   private closed = false;
+  private log: Logger;
 
   public get joinedSpaceId(): string | undefined {
     return this.spaceId;
@@ -77,8 +80,11 @@ export class User {
     this.x = 0;
     this.y = 0;
     this.ws = ws;
+    this.log = logger.child({ connectionId: this.id });
     this.joinTimeout = setTimeout(() => {
-      if (!this.spaceId) this.ws.close(WS_CLOSE_UNAUTHORIZED, "join timeout");
+      if (this.spaceId) return;
+      this.log.debug("closing socket that never sent a join");
+      this.ws.close(WS_CLOSE_UNAUTHORIZED, "join timeout");
     }, JOIN_TIMEOUT_MS);
     this.initHandlers();
   }
@@ -95,6 +101,7 @@ export class User {
       try {
         parsedData = JSON.parse(data.toString()) as IncomingMessage;
       } catch {
+        this.log.debug("discarded unparseable frame");
         return;
       }
 
@@ -120,7 +127,10 @@ export class User {
             break;
         }
       } catch (err) {
-        console.error("Failed to handle ws message", err);
+        this.log.error(
+          { err, messageType: parsedData.type },
+          "failed to handle ws message",
+        );
       }
     });
   }
@@ -138,6 +148,7 @@ export class User {
   private async join(payload: Payload<"join">): Promise<void> {
     const parsed = JoinPayloadSchema.safeParse(payload);
     if (!parsed.success) {
+      this.log.debug("rejected join with a malformed payload");
       this.ws.close(WS_CLOSE_UNAUTHORIZED, "unauthorized");
       return;
     }
@@ -153,6 +164,7 @@ export class User {
       userId = undefined;
     }
     if (!userId) {
+      this.log.warn({ spaceId }, "rejected join with an unusable token");
       this.ws.close(WS_CLOSE_UNAUTHORIZED, "unauthorized");
       return;
     }
@@ -161,11 +173,13 @@ export class User {
     const space = await client.space.findFirst({ where: { id: spaceId } });
     if (this.closed) return;
     if (!space) {
+      this.log.debug({ spaceId }, "rejected join for an unknown space");
       this.ws.close();
       return;
     }
     this.clearJoinTimeout();
     this.spaceId = spaceId;
+    this.log = this.log.child({ userId, spaceId });
     this.spaceWidth = space.width;
     this.spaceHeight = space.height;
     this.collision = loadCollision(space.mapImage);
@@ -189,7 +203,10 @@ export class User {
         this.collision.cols !== space.width ||
         this.collision.rows !== space.height)
     ) {
-      console.error(`Invalid hide-and-seek assets for space ${spaceId}`);
+      this.log.error(
+        { spaceId },
+        "invalid hide-and-seek assets, refusing to admit player",
+      );
       this.spaceId = undefined;
       this.ws.close();
       return;
@@ -213,6 +230,7 @@ export class User {
       },
     });
     RoomManager.getInstance().announceJoined(this, spaceId);
+    this.log.debug({ hideSeekEnabled }, "player joined space");
   }
 
   private handleMove(payload: Payload<"move">): void {
