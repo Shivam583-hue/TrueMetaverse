@@ -9,6 +9,7 @@ import {
 import client from "@repo/db/client";
 import { isVideoEnabled } from "@repo/types";
 import { userMiddleware } from "../../middleware/user";
+import { logger } from "../../logger";
 import {
   LIVEKIT_API_KEY,
   LIVEKIT_API_SECRET,
@@ -26,7 +27,7 @@ const DEFAULT_SOURCES = [TrackSource.CAMERA, TrackSource.MICROPHONE];
 const PRESENTER_SOURCES = [...DEFAULT_SOURCES, TrackSource.SCREEN_SHARE];
 
 if (usingDevLivekitKeys && process.env.NODE_ENV === "production") {
-  console.warn(
+  logger.warn(
     "LiveKit is using the --dev placeholder credentials in production. " +
       "Set LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET.",
   );
@@ -184,6 +185,11 @@ livekitRouter.post("/present/release", userMiddleware, async (req, res) => {
 
   try {
     await setSources(space.id, identity, DEFAULT_SOURCES);
-  } catch {}
+  } catch (err) {
+    req.log.warn(
+      { err, spaceId: space.id, identity },
+      "could not revoke screen share grant, participant has probably already left",
+    );
+  }
   res.json({ message: "Lectern released" });
 });

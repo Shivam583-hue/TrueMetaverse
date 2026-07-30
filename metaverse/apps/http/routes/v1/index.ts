@@ -5,7 +5,7 @@ import { studyRouter } from "./study";
 import { livekitRouter } from "./livekit";
 import { SigninSchema, SignupSchema } from "../../types";
 import { hash, compare } from "../../scrypt";
-import client from "@repo/db/client";
+import client, { isUniqueConstraintViolation } from "@repo/db/client";
 import jwt from "jsonwebtoken";
 import { JWT_ALGORITHM, JWT_PASSWORD } from "../../config";
 import { authLimiter } from "../../middleware/rateLimit";
@@ -38,8 +38,16 @@ router.post("/signup", authLimiter, async (req, res) => {
     res.json({
       userId: user.id,
     });
-  } catch (e) {
-    res.status(400).json({ message: "User already exists" });
+  } catch (err) {
+    if (isUniqueConstraintViolation(err)) {
+      res.status(400).json({ message: "User already exists" });
+      return;
+    }
+    req.log.error(
+      { err, username: parsedData.data.username },
+      "signup failed for a reason other than a taken username",
+    );
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -80,7 +88,11 @@ router.post("/signin", authLimiter, async (req, res) => {
     res.json({
       token,
     });
-  } catch (e) {
+  } catch (err) {
+    req.log.error(
+      { err, username: parsedData.data.username },
+      "signin failed unexpectedly",
+    );
     res.status(500).json({ message: "Internal server error" });
   }
 });

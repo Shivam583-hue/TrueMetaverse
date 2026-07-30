@@ -11,6 +11,8 @@ COPY apps/web/package.json apps/web/package.json
 COPY apps/ws/package.json apps/ws/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
+COPY packages/lifecycle/package.json packages/lifecycle/package.json
+COPY packages/logger/package.json packages/logger/package.json
 COPY packages/types/package.json packages/types/package.json
 COPY packages/typescript-config/package.json packages/typescript-config/package.json
 COPY packages/ui/package.json packages/ui/package.json

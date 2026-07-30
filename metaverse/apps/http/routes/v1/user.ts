@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { UpdateMetadataSchema, UpdateWokaSchema } from "../../types";
-import client from "@repo/db/client";
+import client, {
+  isForeignKeyViolation,
+  isRecordNotFound,
+} from "@repo/db/client";
 import { userMiddleware } from "../../middleware/user";
 
 export const userRouter = Router();
@@ -17,15 +20,15 @@ userRouter.post("/woka", userMiddleware, async (req, res) => {
       data: { wokaAppearance: parsed.data.appearance },
     });
     res.json({ message: "Appearance updated" });
-  } catch {
-    res.status(400).json({ message: "Internal server error" });
+  } catch (err) {
+    req.log.error({ err }, "failed to update woka appearance");
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
 userRouter.post("/metadata", userMiddleware, async (req, res) => {
   const parsedData = UpdateMetadataSchema.safeParse(req.body);
   if (!parsedData.success) {
-    console.log("parsed data incorrect");
     res.status(400).json({ message: "Validation failed" });
     return;
   }
@@ -39,9 +42,13 @@ userRouter.post("/metadata", userMiddleware, async (req, res) => {
       },
     });
     res.json({ message: "Metadata updated" });
-  } catch (e) {
-    console.log("error");
-    res.status(400).json({ message: "Internal server error" });
+  } catch (err) {
+    if (isForeignKeyViolation(err) || isRecordNotFound(err)) {
+      res.status(400).json({ message: "Unknown avatar" });
+      return;
+    }
+    req.log.error({ err }, "failed to update avatar metadata");
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 

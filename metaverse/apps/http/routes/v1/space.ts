@@ -1,5 +1,5 @@
 import { Router } from "express";
-import client from "@repo/db/client";
+import client, { isUniqueConstraintViolation } from "@repo/db/client";
 import { userMiddleware } from "../../middleware/user";
 import { CreateSpaceSchema } from "../../types";
 import { roomCodeLimiter } from "../../middleware/rateLimit";
@@ -69,13 +69,19 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
       });
       res.json({ spaceId: space.id, code: space.code });
       return;
-    } catch (e: any) {
-      if (e?.code !== "P2002") {
-        res.status(400).json({ message: "Could not create space" });
+    } catch (err) {
+      if (!isUniqueConstraintViolation(err)) {
+        req.log.error(
+          { err, mapId: parsedData.data.mapId },
+          "space creation failed",
+        );
+        res.status(500).json({ message: "Could not create space" });
         return;
       }
+      req.log.debug({ attempt }, "retrying space creation after a code clash");
     }
   }
+  req.log.error("gave up generating a unique space code after 3 attempts");
   res.status(500).json({ message: "Could not create space" });
 });
 
